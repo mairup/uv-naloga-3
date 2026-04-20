@@ -785,6 +785,8 @@ public class ReservationController {
         if (birth != null) {
             check(payerBirthDate, birth.isAfter(LocalDate.now()),
                     "Datum rojstva plačnika ne sme biti v prihodnosti.", errors);
+            check(payerBirthDate, birth.isAfter(LocalDate.now().minusYears(18)),
+                    "Plačnik mora biti star vsaj 18 let.", errors);
         }
 
         check(cardNumber, isBlank(viewModel.cardNumber.get()), "Vpišite številko kartice.", errors);
@@ -1071,7 +1073,7 @@ public class ReservationController {
         java.util.stream.Stream.of(payerName, payerSurname, payerStreet, payerHouseNumber)
                 .filter(Objects::nonNull).forEach(TextField::clear);
         payerCountry.getSelectionModel().select("Slovenija");
-        payerBirthDate.setValue(LocalDate.now().minusYears(18));
+        payerBirthDate.setValue(null);
     }
 
     private void resetCardDetails() {
