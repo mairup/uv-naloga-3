@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<BorderPane prefHeight="900.0" prefWidth="640.0" styleClass="earth-root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.uv.naloge.naloga3.ReservationController">
+    <fx:define>
+        <ToggleGroup fx:id="accommodationType" />
+    </fx:define>
+
+    <top>
+        <MenuBar>
+            <menus>
+                <Menu text="Datoteka">
+                    <items>
+                        <MenuItem fx:id="saveItem" onAction="#onSave" text="Shrani vnos">
+                            <graphic>
+                                <FontIcon iconLiteral="bi-card-checklist" iconSize="14" styleClass="menu-icon" />
+                            </graphic>
+                        </MenuItem>
+                        <MenuItem fx:id="resetItem" onAction="#onReset" text="Ponastavi vnose">
+                            <graphic>
+                                <FontIcon iconLiteral="bi-arrow-counterclockwise" iconSize="14" styleClass="menu-icon" />
+                            </graphic>
+                        </MenuItem>
+                        <SeparatorMenuItem />
+                        <MenuItem fx:id="closeItem" onAction="#onClose" text="Zapri">
+                            <graphic>
+                                <FontIcon iconLiteral="bi-x-circle" iconSize="14" styleClass="menu-icon" />
+                            </graphic>
+                        </MenuItem>
+                    </items>
+                </Menu>
+                <Menu text="Pomoč">
+                    <items>
+                        <MenuItem fx:id="aboutItem" onAction="#onAbout" text="O aplikaciji">
+                            <graphic>
+                                <FontIcon iconLiteral="bi-info-circle" iconSize="14" styleClass="menu-icon" />
+                            </graphic>
+                        </MenuItem>
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </top>
+
+    <center>
+        <VBox spacing="10.0">
+            <padding>
+                <Insets bottom="10.0" left="14.0" right="14.0" top="10.0" />
+            </padding>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="toolbar-shell">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                        <children>
+                            <Label styleClass="toolbar-title" text="Rezervacija počitnic" />
+                        </children>
+                    </HBox>
+                    <Pane HBox.hgrow="ALWAYS" />
+                    <HBox alignment="CENTER" spacing="8.0" styleClass="nav-highlight">
+                        <children>
+                            <Button fx:id="btnPrev" mnemonicParsing="false" onAction="#onPrevPage" styleClass="primary-button" text="Nazaj" disable="true">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-arrow-left" iconSize="14" styleClass="button-icon" />
+                                </graphic>
+                            </Button>
+                            <Label fx:id="pageIndicator" styleClass="nav-indicator" text="1 / 4" />
+                            <Button fx:id="btnNext" mnemonicParsing="false" onAction="#onNextPage" styleClass="primary-button" text="Naprej">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-arrow-right" iconSize="14" styleClass="button-icon" />
+                                </graphic>
+                            </Button>
+                        </children>
+                    </HBox>
+                </children>
+                <padding>
+                    <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                </padding>
+            </HBox>
+
+            <VBox fx:id="pageStack" spacing="0.0">
+            <ScrollPane fx:id="page1" fitToWidth="true" hbarPolicy="NEVER" styleClass="form-scroll" vbarPolicy="AS_NEEDED">
+                <content>
+                    <VBox spacing="12.0" styleClass="content-pane">
+                        <padding>
+                            <Insets bottom="16.0" left="0.0" right="0.0" top="14.0" />
+                        </padding>
+
+                        <VBox spacing="10.0" styleClass="card">
+                            <children>
+                                <Label styleClass="section-title" text="Potovanje" />
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="140.0" percentWidth="38.0" />
+                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="62.0" />
+                                    </columnConstraints>
+
+                                    <Label styleClass="field-label" text="Država destinacije" GridPane.rowIndex="0" />
+                                    <ComboBox fx:id="destinationCountry" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                                    <Label styleClass="field-label" text="Destinacija" GridPane.rowIndex="1" />
+                                    <ComboBox fx:id="destination" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                                    <Label styleClass="field-label" text="Kraj nastanitve" GridPane.rowIndex="2" />
+                                    <TextField fx:id="accommodationLocation" promptText="npr. Portorož" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                                    <Label styleClass="field-label" text="Datum odhoda" GridPane.rowIndex="3" />
+                                    <DatePicker fx:id="departureDate" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                                    <Label styleClass="field-label" text="Datum vrnitve" GridPane.rowIndex="4" />
+                                    <DatePicker fx:id="returnDate" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+
+                                    <Label styleClass="field-label" text="Način prevoza" GridPane.rowIndex="5" />
+                                    <ComboBox fx:id="transportMode" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+
+                                    <Label fx:id="customTransportModeLabel" styleClass="field-label" text="Drugi prevoz (po izbiri)" GridPane.rowIndex="6" />
+                                    <TextField fx:id="customTransportMode" promptText="Vpišite način prevoza" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                                </GridPane>
+                            </children>
+                            <padding>
+                                <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+                            </padding>
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
+
+            <VBox fx:id="page2" visible="false" managed="false" spacing="12.0" styleClass="content-pane">
+                <padding>
+                    <Insets bottom="16.0" left="0.0" right="0.0" top="14.0" />
+                </padding>
+
+                <VBox spacing="10.0" styleClass="card">
+                    <children>
+                        <Label styleClass="section-title" text="Nastanitev" />
+
+                        <Label styleClass="field-label" text="Tip nastanitve" />
+                        <FlowPane hgap="10.0" vgap="8.0" prefWrapLength="460.0">
+                            <children>
+                                <RadioButton fx:id="roomAccommodation" styleClass="choice-button" text="Soba" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-door-closed" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                                <RadioButton styleClass="choice-button" text="Apartma" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-building" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                                <RadioButton styleClass="choice-button" text="Mobilna hiška" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-house" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                                <RadioButton styleClass="choice-button" text="Hiša" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-house-door" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                                <RadioButton styleClass="choice-button" text="Kamp prostor" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-tree" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                                <RadioButton fx:id="customAccommodationOption" styleClass="choice-button" text="Po izbiri" toggleGroup="$accommodationType">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-pencil" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </RadioButton>
+                            </children>
+                        </FlowPane>
+                        <TextField fx:id="customAccommodationType" promptText="Vpišite tip nastanitve" />
+
+                        <Label styleClass="field-label" text="Posebne zahteve" />
+                        <FlowPane hgap="10.0" vgap="8.0" prefWrapLength="460.0">
+                            <children>
+                                <CheckBox fx:id="airConditioning" styleClass="choice-button" text="Klima">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-snow" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="parking" styleClass="choice-button" text="Parkirišče">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-signpost" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="internet" styleClass="choice-button" text="Internet">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-globe" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="wifi" styleClass="choice-button" text="Wi-Fi">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-wifi" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="pool" styleClass="choice-button" text="Bazen">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-droplet" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="hotWater" styleClass="choice-button" text="Topla voda">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-droplet-fill" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="fridge" styleClass="choice-button" text="Hladilnik">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-thermometer-snow" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                                <CheckBox fx:id="accessibility" styleClass="choice-button" text="Prilagojen dostop">
+                                    <graphic>
+                                        <FontIcon iconLiteral="bi-person-check" iconSize="14" styleClass="button-icon" />
+                                    </graphic>
+                                </CheckBox>
+                            </children>
+                        </FlowPane>
+                    </children>
+                    <padding>
+                        <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+                    </padding>
+                </VBox>
+            </VBox>
+
+            <ScrollPane fx:id="page3" visible="false" managed="false" fitToWidth="true" hbarPolicy="NEVER" styleClass="form-scroll" vbarPolicy="AS_NEEDED">
+                <content>
+                    <VBox spacing="12.0" styleClass="content-pane">
+                        <padding>
+                            <Insets bottom="16.0" left="0.0" right="0.0" top="14.0" />
+                        </padding>
+
+                        <VBox spacing="10.0" styleClass="card">
+                            <children>
+                                <Label styleClass="section-title" text="Plačilo" />
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints minWidth="140.0" percentWidth="38.0" />
+                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="62.0" />
+                                    </columnConstraints>
+
+                                    <Label styleClass="field-label" text="Ime" GridPane.rowIndex="0" />
+                                    <TextField fx:id="payerName" promptText="Ime" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                                    <Label styleClass="field-label" text="Priimek" GridPane.rowIndex="1" />
+                                    <TextField fx:id="payerSurname" promptText="Priimek" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                                    <Label styleClass="field-label" text="Ulica" GridPane.rowIndex="2" />
+                                    <TextField fx:id="payerStreet" promptText="Ulica" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                                    <Label styleClass="field-label" text="Hišna številka" GridPane.rowIndex="3" />
+                                    <TextField fx:id="payerHouseNumber" promptText="npr. 12" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                                    <Label styleClass="field-label" text="Država" GridPane.rowIndex="4" />
+                                    <ComboBox fx:id="payerCountry" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+
+                                    <Label styleClass="field-label" text="Datum rojstva" GridPane.rowIndex="5" />
+                                    <DatePicker fx:id="payerBirthDate" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+
+                                    <Label styleClass="field-label" text="Številka kartice" GridPane.rowIndex="6" />
+                                    <TextField fx:id="cardNumber" promptText="13 do 19 števk" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+
+                                    <Label styleClass="field-label" text="Imetnik kartice" GridPane.rowIndex="7" />
+                                    <TextField fx:id="cardHolder" promptText="Ime in priimek" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+
+                                    <Label styleClass="field-label" text="Varnostna koda" GridPane.rowIndex="8" />
+                                    <TextField fx:id="cardSecurityCode" promptText="CCV" GridPane.columnIndex="1" GridPane.rowIndex="8" />
+                                </GridPane>
+                            </children>
+                            <padding>
+                                <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+                            </padding>
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
+
+            <ScrollPane fx:id="page4" visible="false" managed="false" fitToWidth="true" hbarPolicy="NEVER" styleClass="form-scroll" vbarPolicy="AS_NEEDED">
+                <content>
+                    <VBox spacing="12.0" styleClass="content-pane">
+                        <padding>
+                            <Insets bottom="16.0" left="0.0" right="0.0" top="14.0" />
+                        </padding>
+
+                        <VBox spacing="10.0" styleClass="card">
+                            <children>
+                                <Label styleClass="section-title" text="Osebe" />
+
+                                <GridPane hgap="10.0" vgap="10.0">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
+                                    </columnConstraints>
+
+                                    <VBox spacing="4.0" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                        <children>
+                                            <Label styleClass="field-label" text="Osebe do 7 let" />
+                                            <Spinner fx:id="childrenCount" editable="true" maxWidth="1.7976931348623157E308" />
+                                        </children>
+                                    </VBox>
+
+                                    <VBox spacing="4.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                        <children>
+                                            <Label styleClass="field-label" text="Osebe od 8 do 18 let" />
+                                            <Spinner fx:id="teenCount" editable="true" maxWidth="1.7976931348623157E308" />
+                                        </children>
+                                    </VBox>
+
+                                    <VBox spacing="4.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                                        <children>
+                                            <Label styleClass="field-label" text="Odrasle osebe" />
+                                            <Spinner fx:id="adultCount" editable="true" maxWidth="1.7976931348623157E308" />
+                                        </children>
+                                    </VBox>
+                                </GridPane>
+
+                                <Label fx:id="participantCount" styleClass="participant-count" text="Število oseb v podrobnostih: 0" />
+                                <VBox fx:id="participantRowsBox" spacing="8.0" />
+                            </children>
+                            <padding>
+                                <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />
+                            </padding>
+                        </VBox>
+                    </VBox>
+                </content>
+            </ScrollPane>
+            </VBox>
+
+            <HBox alignment="CENTER_RIGHT" styleClass="action-shell-wrap">
+                <padding>
+                    <Insets bottom="0.0" left="14.0" right="14.0" top="0.0" />
+                </padding>
+                <children>
+                    <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="action-shell">
+                        <children>
+                            <Button fx:id="btnCheck" mnemonicParsing="false" onAction="#onCheckCurrentPage" styleClass="secondary-button" text="Preveri">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-check2-circle" iconSize="14" styleClass="button-icon" />
+                                </graphic>
+                            </Button>
+                            <Button fx:id="btnSave" mnemonicParsing="false" onAction="#onSave" styleClass="secondary-button" text="Shrani">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-card-checklist" iconSize="14" styleClass="button-icon" />
+                                </graphic>
+                            </Button>
+                            <Button fx:id="btnReset" mnemonicParsing="false" onAction="#onReset" styleClass="secondary-button" text="Ponastavi">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-arrow-repeat" iconSize="14" styleClass="button-icon" />
+                                </graphic>
+                            </Button>
+                            <Button fx:id="btnReserve" mnemonicParsing="false" onAction="#onReserve" styleClass="success-button" text="Rezerviraj">
+                                <graphic>
+                                    <FontIcon iconLiteral="bi-check2-circle" iconSize="14" styleClass="success-icon" />
+                                </graphic>
+                            </Button>
+                        </children>
+                        <padding>
+                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                        </padding>
+                    </HBox>
+                </children>
+            </HBox>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox styleClass="status-bar">
+            <children>
+                <Label fx:id="status" text="" />
+            </children>
+            <padding>
+                <Insets bottom="8.0" left="12.0" right="12.0" top="8.0" />
+            </padding>
+        </HBox>
+    </bottom>
+</BorderPane>
