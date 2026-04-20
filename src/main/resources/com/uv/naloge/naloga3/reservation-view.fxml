@@ -343,7 +343,7 @@
                                 <Label styleClass="section-title" text="Osebe" />
 
                                 <Label fx:id="participantCount" styleClass="participant-count" text="Število oseb v podrobnostih: 0" />
-                                <VBox fx:id="participantRowsBox" spacing="8.0" />
+                                <VBox fx:id="participantRowsBox" alignment="CENTER" spacing="8.0" />
                             </children>
                             <padding>
                                 <Insets bottom="14.0" left="14.0" right="14.0" top="14.0" />

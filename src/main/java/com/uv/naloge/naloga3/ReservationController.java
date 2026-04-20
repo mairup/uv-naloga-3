@@ -121,8 +121,6 @@ public class ReservationController {
     private Label status;
     @FXML
     private Label pageIndicator;
-    @FXML
-    private Label actionSeparator;
 
     @FXML
     private MenuItem openItem;
@@ -218,7 +216,7 @@ public class ReservationController {
         cardHolder.textProperty().bindBidirectional(viewModel.cardHolder);
         cardSecurityCode.textProperty().bindBidirectional(viewModel.cardSecurityCode);
 
-        refreshParticipantRows();
+        rebuildParticipantRows();
     }
 
     private void configureResponsiveButtons() {
@@ -246,19 +244,11 @@ public class ReservationController {
             btnNext.setText("");
             btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
             btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-            if (actionSeparator != null) {
-                actionSeparator.setVisible(false);
-                actionSeparator.setManaged(false);
-            }
         } else {
             btnPrev.setText("Nazaj");
             btnNext.setText("Naprej");
             btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
             btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
-            if (actionSeparator != null) {
-                actionSeparator.setVisible(true);
-                actionSeparator.setManaged(true);
-            }
         }
     }
 
@@ -421,7 +411,8 @@ public class ReservationController {
 
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.isEmpty()) continue;
+            if (trimmed.isEmpty())
+                continue;
 
             if (trimmed.startsWith("REZERVACIJA")) {
                 fields.put("REZERVACIJA POČITNIC", trimmed);
@@ -455,9 +446,12 @@ public class ReservationController {
                     key = "Država plačnika";
                 }
                 if (currentSection != null && currentSection.equals("KARTICA")) {
-                    if (key.equals("Številka")) key = "Številka kartice";
-                    if (key.equals("Imetnik")) key = "Imetnik kartice";
-                    if (key.equals("Varnostna koda")) key = "Varnostna koda";
+                    if (key.equals("Številka"))
+                        key = "Številka kartice";
+                    if (key.equals("Imetnik"))
+                        key = "Imetnik kartice";
+                    if (key.equals("Varnostna koda"))
+                        key = "Varnostna koda";
                 }
                 fields.put(key, value);
             } else if (currentSection != null && currentSection.equals("PREVOZ")) {
@@ -471,7 +465,8 @@ public class ReservationController {
 
     private void setFieldSafely(ComboBox<String> comboBox, Map<String, String> fields, String key) {
         String value = fields.get(key);
-        if (value == null || value.isEmpty()) return;
+        if (value == null || value.isEmpty())
+            return;
         for (String item : comboBox.getItems()) {
             if (item.equals(value)) {
                 comboBox.getSelectionModel().select(value);
@@ -481,7 +476,8 @@ public class ReservationController {
     }
 
     private LocalDate parseDateField(String value) {
-        if (value == null || value.isEmpty()) return null;
+        if (value == null || value.isEmpty())
+            return null;
         try {
             return LocalDate.parse(value.trim(), dateFormatter);
         } catch (Exception e) {
@@ -490,7 +486,8 @@ public class ReservationController {
     }
 
     private void restoreTransport(String transportLine) {
-        if (transportLine.isEmpty()) return;
+        if (transportLine.isEmpty())
+            return;
 
         String[] modes = transportLine.split("\\s*,\\s*");
         if (modes.length > 0 && !modes[0].isEmpty()) {
@@ -539,7 +536,8 @@ public class ReservationController {
         fridge.setSelected(false);
         accessibility.setSelected(false);
 
-        if (requirementsLine.isEmpty() || requirementsLine.equals("Brez posebnih zahtev")) return;
+        if (requirementsLine.isEmpty() || requirementsLine.equals("Brez posebnih zahtev"))
+            return;
 
         Map<CheckBox, String> checkboxMap = new HashMap<>();
         checkboxMap.put(airConditioning, "Klima");
@@ -568,23 +566,26 @@ public class ReservationController {
         viewModel.participants.clear();
 
         if (participantBlock.isEmpty() || participantBlock.equals("Ni vnesenih oseb.")) {
-            viewModel.participants.add(new ParticipantViewModel());
             participantRowsRefreshing = false;
-            refreshParticipantRows();
+            viewModel.participants.add(new ParticipantViewModel());
+            rebuildParticipantRows();
             return;
         }
 
         String[] lines = participantBlock.split("\\r?\\n");
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.isEmpty()) continue;
+            if (trimmed.isEmpty())
+                continue;
 
             int dotIdx = trimmed.indexOf('.');
-            if (dotIdx < 0) continue;
+            if (dotIdx < 0)
+                continue;
 
             String afterNumber = trimmed.substring(dotIdx + 1).trim();
             int lastDash = afterNumber.lastIndexOf(" - ");
-            if (lastDash < 0) continue;
+            if (lastDash < 0)
+                continue;
 
             String namePart = afterNumber.substring(0, lastDash).trim();
             String datePart = afterNumber.substring(lastDash + 3).trim();
@@ -600,9 +601,8 @@ public class ReservationController {
             viewModel.participants.add(pvm);
         }
 
-        viewModel.participants.add(new ParticipantViewModel());
         participantRowsRefreshing = false;
-        refreshParticipantRows();
+        rebuildParticipantRows();
     }
 
     @FXML
@@ -845,8 +845,13 @@ public class ReservationController {
 
         if (!hasAtLeastOneFilledRow) {
             errors.add("Vnesite vsaj eno osebo.");
-            if (!participantRows.isEmpty()) {
-                markInvalid(participantRows.get(0).name, "Vnesite vsaj eno osebo.");
+            for (ParticipantRow row : participantRows) {
+                markInvalid(row.name, "Vnesite vsaj eno osebo.");
+                markInvalid(row.surname, "Vnesite vsaj eno osebo.");
+                String bdText = row.birthDate.getEditor() == null ? "" : row.birthDate.getEditor().getText();
+                if (isBlank(bdText)) {
+                    markInvalid(row.birthDate, "Vnesite vsaj eno osebo.");
+                }
             }
         }
 
@@ -1077,7 +1082,7 @@ public class ReservationController {
     private void resetParticipants() {
         viewModel.participants.clear();
         viewModel.participants.add(new ParticipantViewModel());
-        refreshParticipantRows();
+        rebuildParticipantRows();
     }
 
     private void refreshDestinationChoices(String country) {
@@ -1088,11 +1093,6 @@ public class ReservationController {
         } else {
             destination.getSelectionModel().clearSelection();
         }
-    }
-
-    private void refreshParticipantRows() {
-        ensureSingleTrailingEmptyParticipantRow();
-        rebuildParticipantRows();
     }
 
     private void rebuildParticipantRows() {
@@ -1109,22 +1109,6 @@ public class ReservationController {
             row.surname.textProperty().bindBidirectional(pVm.surname);
             row.birthDate.valueProperty().bindBidirectional(pVm.birthDate);
 
-            row.name.focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    onParticipantRowFocused(rowIndex, ParticipantField.NAME);
-                }
-            });
-            row.surname.focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    onParticipantRowFocused(rowIndex, ParticipantField.SURNAME);
-                }
-            });
-            row.birthDate.focusedProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal) {
-                    onParticipantRowFocused(rowIndex, ParticipantField.BIRTH_DATE);
-                }
-            });
-
             row.name.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
             row.surname.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
             row.birthDate.valueProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
@@ -1137,96 +1121,48 @@ public class ReservationController {
             participantRowsBox.getChildren().add(row.container);
         }
 
+        Button addButton = new Button();
+        addButton.getStyleClass().add("tile-add-button");
+        addButton.setPrefWidth(36);
+        addButton.setMaxWidth(36);
+        addButton.setMinWidth(36);
+        org.kordamp.ikonli.javafx.FontIcon addIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-plus");
+        addIcon.setIconSize(22);
+        addIcon.getStyleClass().add("tile-add-icon");
+        addButton.setGraphic(addIcon);
+        addButton.setOnAction(event -> addParticipantRow());
+        addButton.setAlignment(javafx.geometry.Pos.CENTER);
+        participantRowsBox.getChildren().add(addButton);
+
         participantRowsRefreshing = false;
-        updateParticipantRowsVisualState();
+        updateParticipantCount();
+    }
+
+    private void addParticipantRow() {
+        viewModel.participants.add(new ParticipantViewModel());
+        rebuildParticipantRows();
+        if (!participantRows.isEmpty()) {
+            ParticipantRow lastRow = participantRows.get(participantRows.size() - 1);
+            Platform.runLater(lastRow.name::requestFocus);
+        }
     }
 
     private void onParticipantRowChanged() {
-        if (participantRowsRefreshing) {
+        if (participantRowsRefreshing)
             return;
-        }
-
-        int previousSize = viewModel.participants.size();
-        ensureSingleTrailingEmptyParticipantRow();
-
-        if (viewModel.participants.size() != previousSize) {
-            rebuildParticipantRows();
-        } else {
-            updateParticipantRowsVisualState();
-        }
+        updateParticipantCount();
     }
 
     private void removeParticipantRow(int index) {
-        if (index < 0 || index >= viewModel.participants.size()) {
+        if (index < 0 || index >= viewModel.participants.size())
             return;
-        }
-
         viewModel.participants.remove(index);
-        ensureSingleTrailingEmptyParticipantRow();
         rebuildParticipantRows();
     }
 
-    private void onParticipantRowFocused(int rowIndex, ParticipantField focusedField) {
-        if (participantRowsRefreshing || rowIndex < 0 || rowIndex >= viewModel.participants.size()) {
-            return;
-        }
-
-        boolean isLastRow = rowIndex == viewModel.participants.size() - 1;
-        if (!isLastRow || !isParticipantEmpty(viewModel.participants.get(rowIndex))) {
-            return;
-        }
-
-        viewModel.participants.add(new ParticipantViewModel());
-        rebuildParticipantRows();
-
-        if (rowIndex < participantRows.size()) {
-            ParticipantRow row = participantRows.get(rowIndex);
-            Platform.runLater(() -> {
-                switch (focusedField) {
-                    case NAME -> row.name.requestFocus();
-                    case SURNAME -> row.surname.requestFocus();
-                    case BIRTH_DATE -> row.birthDate.requestFocus();
-                }
-            });
-        }
-    }
-
-    private void ensureSingleTrailingEmptyParticipantRow() {
-        if (viewModel.participants.isEmpty()) {
-            viewModel.participants.add(new ParticipantViewModel());
-            return;
-        }
-
-        while (viewModel.participants.size() > 1) {
-            int lastIndex = viewModel.participants.size() - 1;
-            ParticipantViewModel last = viewModel.participants.get(lastIndex);
-            ParticipantViewModel beforeLast = viewModel.participants.get(lastIndex - 1);
-            if (isParticipantEmpty(last) && isParticipantEmpty(beforeLast)) {
-                viewModel.participants.remove(lastIndex);
-            } else {
-                break;
-            }
-        }
-
-        ParticipantViewModel last = viewModel.participants.get(viewModel.participants.size() - 1);
-        if (!isParticipantEmpty(last)) {
-            viewModel.participants.add(new ParticipantViewModel());
-        }
-    }
-
-    private void updateParticipantRowsVisualState() {
+    private void updateParticipantCount() {
         int filledRows = filledParticipantCount();
         participantCount.setText("Vnesene osebe: " + filledRows);
-
-        int lastIndex = participantRows.size() - 1;
-        for (int i = 0; i < participantRows.size(); i++) {
-            ParticipantRow row = participantRows.get(i);
-            row.setIndex(i + 1);
-
-            boolean isTrailingEmpty = i == lastIndex && isParticipantEmpty(viewModel.participants.get(i));
-            row.setPlaceholder(isTrailingEmpty);
-            row.setRemoveVisible(true);
-        }
     }
 
     private int filledParticipantCount() {
@@ -1540,27 +1476,6 @@ public class ReservationController {
             label.setStyle("-fx-font-size: 14px; -fx-padding: 0 1px 0 0px;");
             container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         }
-
-        private void setPlaceholder(boolean placeholder) {
-            if (placeholder) {
-                if (!container.getStyleClass().contains("participant-row-placeholder")) {
-                    container.getStyleClass().add("participant-row-placeholder");
-                }
-            } else {
-                container.getStyleClass().remove("participant-row-placeholder");
-            }
-        }
-
-        private void setRemoveVisible(boolean visible) {
-            removeButton.setVisible(visible);
-            removeButton.setManaged(visible);
-        }
-    }
-
-    private enum ParticipantField {
-        NAME,
-        SURNAME,
-        BIRTH_DATE
     }
 
     public static final class ReservationViewModel {
