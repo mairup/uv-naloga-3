@@ -6,14 +6,13 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.Spinner;
-import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.Tooltip;
@@ -33,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,13 +75,6 @@ public class ReservationController {
     private RadioButton customAccommodationOption;
     @FXML
     private TextField customAccommodationType;
-
-    @FXML
-    private Spinner<Integer> childrenCount;
-    @FXML
-    private Spinner<Integer> teenCount;
-    @FXML
-    private Spinner<Integer> adultCount;
 
     @FXML
     private CheckBox airConditioning;
@@ -188,6 +179,7 @@ public class ReservationController {
     private final ReservationViewModel viewModel = new ReservationViewModel();
 
     private final List<ParticipantRow> participantRows = new ArrayList<>();
+    private boolean participantRowsRefreshing = false;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
@@ -198,7 +190,6 @@ public class ReservationController {
         updatePagination();
 
         configureChoiceControls();
-        configureCountControls();
         configureNumericInputControls();
         configureDatePickers();
         configureMenuActions();
@@ -216,30 +207,6 @@ public class ReservationController {
         departureDate.valueProperty().bindBidirectional(viewModel.departureDate);
         returnDate.valueProperty().bindBidirectional(viewModel.returnDate);
 
-        childrenCount.valueProperty().addListener((obs, oldVal, newVal) -> {
-            viewModel.childrenCount.set(newVal);
-            refreshParticipantRows();
-        });
-        teenCount.valueProperty().addListener((obs, oldVal, newVal) -> {
-            viewModel.teenCount.set(newVal);
-            refreshParticipantRows();
-        });
-        adultCount.valueProperty().addListener((obs, oldVal, newVal) -> {
-            viewModel.adultCount.set(newVal);
-            refreshParticipantRows();
-        });
-
-        viewModel.childrenCount
-                .addListener((obs, oldVal, newVal) -> childrenCount.getValueFactory().setValue(newVal.intValue()));
-        viewModel.teenCount
-                .addListener((obs, oldVal, newVal) -> teenCount.getValueFactory().setValue(newVal.intValue()));
-        viewModel.adultCount
-                .addListener((obs, oldVal, newVal) -> adultCount.getValueFactory().setValue(newVal.intValue()));
-
-        viewModel.childrenCount.set(childrenCount.getValue());
-        viewModel.teenCount.set(teenCount.getValue());
-        viewModel.adultCount.set(adultCount.getValue());
-
         payerName.textProperty().bindBidirectional(viewModel.payerName);
         payerSurname.textProperty().bindBidirectional(viewModel.payerSurname);
         payerStreet.textProperty().bindBidirectional(viewModel.payerStreet);
@@ -251,30 +218,7 @@ public class ReservationController {
         cardHolder.textProperty().bindBidirectional(viewModel.cardHolder);
         cardSecurityCode.textProperty().bindBidirectional(viewModel.cardSecurityCode);
 
-        viewModel.participants
-                .addListener((javafx.collections.ListChangeListener.Change<? extends ParticipantViewModel> c) -> {
-                    while (c.next()) {
-                        if (c.wasAdded() || c.wasRemoved()) {
-                            participantRowsBox.getChildren().clear();
-                            participantRows.clear();
-                            for (int i = 0; i < viewModel.participants.size(); i++) {
-                                ParticipantViewModel pVm = viewModel.participants.get(i);
-                                ParticipantRow row = new ParticipantRow(i + 1);
-
-                                row.name.textProperty().bindBidirectional(pVm.name);
-                                row.surname.textProperty().bindBidirectional(pVm.surname);
-                                row.birthDate.valueProperty().bindBidirectional(pVm.birthDate);
-
-                                attachValidationRecovery(row.name);
-                                attachValidationRecovery(row.surname);
-                                attachValidationRecovery(row.birthDate);
-
-                                participantRows.add(row);
-                                participantRowsBox.getChildren().add(row.container);
-                            }
-                        }
-                    }
-                });
+        refreshParticipantRows();
     }
 
     private void configureResponsiveButtons() {
@@ -592,8 +536,6 @@ public class ReservationController {
         if (birth != null) {
             check(payerBirthDate, birth.isAfter(LocalDate.now()),
                     "Datum rojstva plačnika ne sme biti v prihodnosti.", errors);
-            check(payerBirthDate, Period.between(birth, LocalDate.now()).getYears() < 18,
-                    "Plačnik mora biti polnoleten.", errors);
         }
 
         check(cardNumber, isBlank(viewModel.cardNumber.get()), "Vpišite številko kartice.", errors);
@@ -618,62 +560,45 @@ public class ReservationController {
     private List<String> validateCurrentPagePeople() {
         List<String> errors = new ArrayList<>();
 
-        int totalCount = viewModel.childrenCount.get() + viewModel.teenCount.get() + viewModel.adultCount.get();
-        if (totalCount <= 0) {
-            check(childrenCount, true, "Skupno število oseb mora biti vsaj 1.", null);
-            check(teenCount, true, "Skupno število oseb mora biti vsaj 1.", null);
-            check(adultCount, true, "Skupno število oseb mora biti vsaj 1.", errors);
-        }
+        boolean hasAtLeastOneFilledRow = false;
 
-        int computedChildren = 0;
-        int computedTeenagers = 0;
-        int computedAdults = 0;
-        LocalDate dep = viewModel.departureDate.get();
+        for (int i = 0; i < viewModel.participants.size() && i < participantRows.size(); i++) {
+            ParticipantViewModel participant = viewModel.participants.get(i);
+            ParticipantRow row = participantRows.get(i);
 
-        for (int index = 0; index < participantRows.size(); index++) {
-            ParticipantRow row = participantRows.get(index);
-            ParticipantViewModel pVm = viewModel.participants.get(index);
-            int id = index + 1;
-
-            check(row.name, isBlank(pVm.name.get()), "Vpišite ime za osebo " + id + ".", errors);
-            if (!isBlank(pVm.name.get()))
-                check(row.name, !isValidPersonName(pVm.name.get()),
-                        "Ime osebe " + id + " vsebuje neveljavne znake.", errors);
-
-            check(row.surname, isBlank(pVm.surname.get()), "Vpišite priimek za osebo " + id + ".", errors);
-            if (!isBlank(pVm.surname.get()))
-                check(row.surname, !isValidPersonName(pVm.surname.get()),
-                        "Priimek osebe " + id + " vsebuje neveljavne znake.", errors);
-
-            LocalDate birth = pVm.birthDate.get();
-            check(row.birthDate, birth == null, "Izberite datum rojstva za osebo " + id + ".",
-                    errors);
-            if (birth != null) {
-                check(row.birthDate, birth.isAfter(LocalDate.now()),
-                        "Datum rojstva osebe " + id + " ne sme biti v prihodnosti.", errors);
-
-                if (dep != null && birth.isAfter(dep)) {
-                    check(row.birthDate, true, "Datum rojstva osebe " + id + " mora biti pred datumom odhoda.", errors);
-                } else if (dep != null) {
-                    int ageOnDeparture = Period.between(birth, dep).getYears();
-                    if (ageOnDeparture <= 7) {
-                        computedChildren++;
-                    } else if (ageOnDeparture <= 18) {
-                        computedTeenagers++;
-                    } else {
-                        computedAdults++;
-                    }
-                }
+            if (isParticipantEmpty(participant)) {
+                continue;
             }
+
+            hasAtLeastOneFilledRow = true;
+            int personNumber = i + 1;
+
+            check(row.name, isBlank(participant.name.get()), "Vpišite ime za osebo " + personNumber + ".", errors);
+            if (!isBlank(participant.name.get())) {
+                check(row.name, !isValidPersonName(participant.name.get()),
+                        "Ime osebe " + personNumber + " vsebuje neveljavne znake.", errors);
+            }
+
+            check(row.surname, isBlank(participant.surname.get()), "Vpišite priimek za osebo " + personNumber + ".",
+                    errors);
+            if (!isBlank(participant.surname.get())) {
+                check(row.surname, !isValidPersonName(participant.surname.get()),
+                        "Priimek osebe " + personNumber + " vsebuje neveljavne znake.", errors);
+            }
+
+            String birthDateText = row.birthDate.getEditor() == null ? "" : row.birthDate.getEditor().getText();
+            LocalDate birthDate = participant.birthDate.get();
+            check(row.birthDate, isBlank(birthDateText) && birthDate == null,
+                    "Vpišite datum rojstva za osebo " + personNumber + ".", errors);
+            check(row.birthDate, !isBlank(birthDateText) && birthDate == null,
+                    "Datum rojstva osebe " + personNumber + " ni v veljavnem formatu.", errors);
         }
 
-        if (dep != null && !viewModel.participants.isEmpty()) {
-            check(childrenCount, computedChildren != viewModel.childrenCount.get(),
-                    "Število oseb do 7 let ni usklajeno z rojstnimi datumi.", errors);
-            check(teenCount, computedTeenagers != viewModel.teenCount.get(),
-                    "Število oseb od 8 do 18 let ni usklajeno z rojstnimi datumi.", errors);
-            check(adultCount, computedAdults != viewModel.adultCount.get(),
-                    "Število odraslih oseb ni usklajeno z rojstnimi datumi.", errors);
+        if (!hasAtLeastOneFilledRow) {
+            errors.add("Vnesite vsaj eno osebo.");
+            if (!participantRows.isEmpty()) {
+                markInvalid(participantRows.get(0).name, "Vnesite vsaj eno osebo.");
+            }
         }
 
         return errors;
@@ -714,8 +639,8 @@ public class ReservationController {
                 transportMode, customTransportMode, roomAccommodation, customAccommodationOption,
                 customAccommodationType, airConditioning, parking, internet, wifi, pool, hotWater,
                 fridge, accessibility, payerName, payerSurname, payerStreet, payerHouseNumber,
-                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode,
-                childrenCount, teenCount, adultCount).forEach(this::attachValidationRecovery);
+                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode)
+                .forEach(this::attachValidationRecovery);
     }
 
     private void attachValidationRecovery(Control control) {
@@ -751,16 +676,6 @@ public class ReservationController {
         });
 
         payerCountry.setItems(FXCollections.observableArrayList(PAYER_COUNTRIES));
-    }
-
-    private void configureCountControls() {
-        childrenCount.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 20, 0));
-        teenCount.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 20, 0));
-        adultCount.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 20, 1));
-
-        childrenCount.setEditable(true);
-        teenCount.setEditable(true);
-        adultCount.setEditable(true);
     }
 
     private void configureNumericInputControls() {
@@ -889,10 +804,6 @@ public class ReservationController {
             accommodationType.selectToggle(roomAccommodation);
         customAccommodationType.clear();
         hideAndDisable(customAccommodationType, true);
-
-        childrenCount.getValueFactory().setValue(0);
-        teenCount.getValueFactory().setValue(0);
-        adultCount.getValueFactory().setValue(1);
     }
 
     private void resetSpecialRequirements() {
@@ -914,12 +825,9 @@ public class ReservationController {
     }
 
     private void resetParticipants() {
+        viewModel.participants.clear();
+        viewModel.participants.add(new ParticipantViewModel());
         refreshParticipantRows();
-        viewModel.participants.forEach(p -> {
-            p.name.set("");
-            p.surname.set("");
-            p.birthDate.set(null);
-        });
     }
 
     private void refreshDestinationChoices(String country) {
@@ -933,17 +841,159 @@ public class ReservationController {
     }
 
     private void refreshParticipantRows() {
-        int targetCount = viewModel.childrenCount.get() + viewModel.teenCount.get() + viewModel.adultCount.get();
+        ensureSingleTrailingEmptyParticipantRow();
+        rebuildParticipantRows();
+    }
 
-        while (viewModel.participants.size() < targetCount) {
+    private void rebuildParticipantRows() {
+        participantRowsRefreshing = true;
+        participantRowsBox.getChildren().clear();
+        participantRows.clear();
+
+        for (int i = 0; i < viewModel.participants.size(); i++) {
+            int rowIndex = i;
+            ParticipantViewModel pVm = viewModel.participants.get(i);
+            ParticipantRow row = new ParticipantRow(i + 1, () -> removeParticipantRow(rowIndex));
+
+            row.name.textProperty().bindBidirectional(pVm.name);
+            row.surname.textProperty().bindBidirectional(pVm.surname);
+            row.birthDate.valueProperty().bindBidirectional(pVm.birthDate);
+
+            row.name.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    onParticipantRowFocused(rowIndex, ParticipantField.NAME);
+                }
+            });
+            row.surname.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    onParticipantRowFocused(rowIndex, ParticipantField.SURNAME);
+                }
+            });
+            row.birthDate.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    onParticipantRowFocused(rowIndex, ParticipantField.BIRTH_DATE);
+                }
+            });
+
+            row.name.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
+            row.surname.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
+            row.birthDate.valueProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
+
+            attachValidationRecovery(row.name);
+            attachValidationRecovery(row.surname);
+            attachValidationRecovery(row.birthDate);
+
+            participantRows.add(row);
+            participantRowsBox.getChildren().add(row.container);
+        }
+
+        participantRowsRefreshing = false;
+        updateParticipantRowsVisualState();
+    }
+
+    private void onParticipantRowChanged() {
+        if (participantRowsRefreshing) {
+            return;
+        }
+
+        int previousSize = viewModel.participants.size();
+        ensureSingleTrailingEmptyParticipantRow();
+
+        if (viewModel.participants.size() != previousSize) {
+            rebuildParticipantRows();
+        } else {
+            updateParticipantRowsVisualState();
+        }
+    }
+
+    private void removeParticipantRow(int index) {
+        if (index < 0 || index >= viewModel.participants.size()) {
+            return;
+        }
+
+        viewModel.participants.remove(index);
+        ensureSingleTrailingEmptyParticipantRow();
+        rebuildParticipantRows();
+    }
+
+    private void onParticipantRowFocused(int rowIndex, ParticipantField focusedField) {
+        if (participantRowsRefreshing || rowIndex < 0 || rowIndex >= viewModel.participants.size()) {
+            return;
+        }
+
+        boolean isLastRow = rowIndex == viewModel.participants.size() - 1;
+        if (!isLastRow || !isParticipantEmpty(viewModel.participants.get(rowIndex))) {
+            return;
+        }
+
+        viewModel.participants.add(new ParticipantViewModel());
+        rebuildParticipantRows();
+
+        if (rowIndex < participantRows.size()) {
+            ParticipantRow row = participantRows.get(rowIndex);
+            Platform.runLater(() -> {
+                switch (focusedField) {
+                    case NAME -> row.name.requestFocus();
+                    case SURNAME -> row.surname.requestFocus();
+                    case BIRTH_DATE -> row.birthDate.requestFocus();
+                }
+            });
+        }
+    }
+
+    private void ensureSingleTrailingEmptyParticipantRow() {
+        if (viewModel.participants.isEmpty()) {
+            viewModel.participants.add(new ParticipantViewModel());
+            return;
+        }
+
+        while (viewModel.participants.size() > 1) {
+            int lastIndex = viewModel.participants.size() - 1;
+            ParticipantViewModel last = viewModel.participants.get(lastIndex);
+            ParticipantViewModel beforeLast = viewModel.participants.get(lastIndex - 1);
+            if (isParticipantEmpty(last) && isParticipantEmpty(beforeLast)) {
+                viewModel.participants.remove(lastIndex);
+            } else {
+                break;
+            }
+        }
+
+        ParticipantViewModel last = viewModel.participants.get(viewModel.participants.size() - 1);
+        if (!isParticipantEmpty(last)) {
             viewModel.participants.add(new ParticipantViewModel());
         }
+    }
 
-        while (viewModel.participants.size() > targetCount) {
-            viewModel.participants.remove(viewModel.participants.size() - 1);
+    private void updateParticipantRowsVisualState() {
+        int filledRows = filledParticipantCount();
+        participantCount.setText("Vnesene osebe: " + filledRows);
+
+        int lastIndex = participantRows.size() - 1;
+        for (int i = 0; i < participantRows.size(); i++) {
+            ParticipantRow row = participantRows.get(i);
+            row.setIndex(i + 1);
+
+            boolean isTrailingEmpty = i == lastIndex && isParticipantEmpty(viewModel.participants.get(i));
+            row.setPlaceholder(isTrailingEmpty);
+            row.setRemoveVisible(true);
         }
+    }
 
-        participantCount.setText("Število oseb v podrobnostih: " + targetCount);
+    private int filledParticipantCount() {
+        int count = 0;
+        for (ParticipantViewModel participant : viewModel.participants) {
+            if (!isParticipantEmpty(participant)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean isParticipantEmpty(ParticipantViewModel participant) {
+        return participant == null
+                || (isBlank(participant.name.get())
+                        && isBlank(participant.surname.get())
+                        && participant.birthDate.get() == null);
     }
 
     private void populateViewModelOptions() {
@@ -998,9 +1048,7 @@ public class ReservationController {
 
                 NASTANITEV IN ZAHTEVE
                 Tip nastanitve: %s
-                Do 7 let: %s
-                Od 8 do 18 let: %s
-                Odrasli: %s
+                Število oseb: %s
                 Posebne zahteve: %s
 
                 PLAČNIK
@@ -1026,9 +1074,7 @@ public class ReservationController {
                 formatDate(data.returnDate.get()),
                 String.join(", ", data.transportModes),
                 data.accommodationType.get(),
-                data.childrenCount.get(),
-                data.teenCount.get(),
-                data.adultCount.get(),
+                countFilledParticipants(data.participants),
                 String.join(", ", data.specialRequirements),
                 nonNullText(data.payerName.get()),
                 nonNullText(data.payerSurname.get()),
@@ -1042,15 +1088,33 @@ public class ReservationController {
                 buildParticipantsList(data.participants));
     }
 
+    private int countFilledParticipants(List<ParticipantViewModel> participants) {
+        int filledCount = 0;
+        for (ParticipantViewModel participant : participants) {
+            if (!isParticipantEmpty(participant)) {
+                filledCount++;
+            }
+        }
+        return filledCount;
+    }
+
     private String buildParticipantsList(List<ParticipantViewModel> participants) {
         StringBuilder list = new StringBuilder();
+        int listedIndex = 1;
         for (int index = 0; index < participants.size(); index++) {
             ParticipantViewModel p = participants.get(index);
+            if (isParticipantEmpty(p)) {
+                continue;
+            }
             list.append("%d. %s %s - %s%n".formatted(
-                    index + 1,
+                    listedIndex,
                     nonNullText(p.name.get()),
                     nonNullText(p.surname.get()),
                     formatDate(p.birthDate.get())));
+            listedIndex++;
+        }
+        if (list.isEmpty()) {
+            return "Ni vnesenih oseb.";
         }
         return list.toString().trim();
     }
@@ -1148,16 +1212,25 @@ public class ReservationController {
         private final TextField name;
         private final TextField surname;
         private final DatePicker birthDate;
+        private final Button removeButton;
 
-        private ParticipantRow(int index) {
+        private ParticipantRow(int index, Runnable onRemove) {
             label = new Label();
             name = new TextField();
             surname = new TextField();
             birthDate = new DatePicker();
+            removeButton = new Button("Odstrani");
 
             name.setPromptText("Ime");
             surname.setPromptText("Priimek");
             birthDate.setPromptText("Datum rojstva");
+            removeButton.getStyleClass().add("tile-remove-button");
+            removeButton.setText("");
+            org.kordamp.ikonli.javafx.FontIcon removeIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-trash");
+            removeIcon.setIconSize(16);
+            removeIcon.getStyleClass().add("tile-remove-icon");
+            removeButton.setGraphic(removeIcon);
+            removeButton.setOnAction(event -> onRemove.run());
 
             javafx.util.StringConverter<LocalDate> converter = new javafx.util.StringConverter<LocalDate>() {
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
@@ -1203,7 +1276,7 @@ public class ReservationController {
             HBox.setHgrow(surname, Priority.ALWAYS);
             HBox.setHgrow(birthDate, Priority.ALWAYS);
 
-            container = new HBox(4, label, name, surname, birthDate);
+            container = new HBox(4, label, name, surname, birthDate, removeButton);
             container.getStyleClass().add("participant-row");
 
             setIndex(index);
@@ -1217,6 +1290,27 @@ public class ReservationController {
             label.setStyle("-fx-font-size: 14px; -fx-padding: 0 1px 0 0px;");
             container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         }
+
+        private void setPlaceholder(boolean placeholder) {
+            if (placeholder) {
+                if (!container.getStyleClass().contains("participant-row-placeholder")) {
+                    container.getStyleClass().add("participant-row-placeholder");
+                }
+            } else {
+                container.getStyleClass().remove("participant-row-placeholder");
+            }
+        }
+
+        private void setRemoveVisible(boolean visible) {
+            removeButton.setVisible(visible);
+            removeButton.setManaged(visible);
+        }
+    }
+
+    private enum ParticipantField {
+        NAME,
+        SURNAME,
+        BIRTH_DATE
     }
 
     public static final class ReservationViewModel {
@@ -1227,9 +1321,6 @@ public class ReservationController {
         public final ObjectProperty<LocalDate> returnDate = new SimpleObjectProperty<>();
         public final ObservableList<String> transportModes = FXCollections.observableArrayList();
         public final StringProperty accommodationType = new SimpleStringProperty();
-        public final IntegerProperty childrenCount = new SimpleIntegerProperty();
-        public final IntegerProperty teenCount = new SimpleIntegerProperty();
-        public final IntegerProperty adultCount = new SimpleIntegerProperty();
         public final ObservableList<String> specialRequirements = FXCollections.observableArrayList();
         public final StringProperty payerName = new SimpleStringProperty();
         public final StringProperty payerSurname = new SimpleStringProperty();

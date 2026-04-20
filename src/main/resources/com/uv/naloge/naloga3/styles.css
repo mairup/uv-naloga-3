@@ -339,11 +339,42 @@
 
 .participant-row {
   -fx-padding: 8px 8px 8px 7px;
-  -fx-background-color: #f2e4db;
+  -fx-background-color: #dfe9da;
   -fx-background-radius: 8px;
-  -fx-border-color: #cfb3a5;
+  -fx-border-color: #b6c9af;
   -fx-border-width: 1px;
   -fx-border-radius: 8px;
+}
+
+.participant-row-placeholder {
+  -fx-opacity: 0.4;
+}
+
+.tile-remove-button {
+  -fx-background-color: #efb19b;
+  -fx-border-color: #d99880;
+  -fx-border-width: 1px;
+  -fx-border-radius: 7px;
+  -fx-background-radius: 7px;
+  -fx-text-fill: #7f4534;
+  -fx-font-size: 12px;
+  -fx-font-weight: 700;
+  -fx-padding: 0;
+  -fx-min-width: 28px;
+  -fx-min-height: 28px;
+  -fx-pref-width: 28px;
+  -fx-pref-height: 28px;
+  -fx-max-width: 28px;
+  -fx-max-height: 28px;
+  -fx-alignment: center;
+}
+
+.tile-remove-button:hover {
+  -fx-background-color: #e5a089;
+}
+
+.tile-remove-icon {
+  -fx-icon-color: #7f4534;
 }
 
 .action-row {

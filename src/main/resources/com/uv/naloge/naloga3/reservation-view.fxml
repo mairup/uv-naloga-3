@@ -12,7 +12,6 @@
 <?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SeparatorMenuItem?>
-<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
@@ -337,35 +336,6 @@
                         <VBox spacing="10.0" styleClass="card">
                             <children>
                                 <Label styleClass="section-title" text="Osebe" />
-
-                                <GridPane hgap="10.0" vgap="10.0">
-                                    <columnConstraints>
-                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                                        <ColumnConstraints hgrow="ALWAYS" percentWidth="33.33" />
-                                    </columnConstraints>
-
-                                    <VBox spacing="4.0" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                                        <children>
-                                            <Label styleClass="field-label" text="Osebe do 7 let" />
-                                            <Spinner fx:id="childrenCount" editable="true" maxWidth="1.7976931348623157E308" />
-                                        </children>
-                                    </VBox>
-
-                                    <VBox spacing="4.0" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                                        <children>
-                                            <Label styleClass="field-label" text="Osebe od 8 do 18 let" />
-                                            <Spinner fx:id="teenCount" editable="true" maxWidth="1.7976931348623157E308" />
-                                        </children>
-                                    </VBox>
-
-                                    <VBox spacing="4.0" GridPane.columnIndex="2" GridPane.rowIndex="0">
-                                        <children>
-                                            <Label styleClass="field-label" text="Odrasle osebe" />
-                                            <Spinner fx:id="adultCount" editable="true" maxWidth="1.7976931348623157E308" />
-                                        </children>
-                                    </VBox>
-                                </GridPane>
 
                                 <Label fx:id="participantCount" styleClass="participant-count" text="Število oseb v podrobnostih: 0" />
                                 <VBox fx:id="participantRowsBox" spacing="8.0" />
