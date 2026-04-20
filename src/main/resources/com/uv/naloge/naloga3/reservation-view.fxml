@@ -24,7 +24,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<BorderPane prefHeight="900.0" prefWidth="640.0" styleClass="earth-root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.uv.naloge.naloga3.ReservationController">
+<BorderPane prefHeight="770.0" prefWidth="640.0" styleClass="earth-root" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.uv.naloge.naloga3.ReservationController">
     <fx:define>
         <ToggleGroup fx:id="accommodationType" />
     </fx:define>
@@ -34,6 +34,11 @@
             <menus>
                 <Menu mnemonicParsing="true" text="_Datoteka">
                     <items>
+                        <MenuItem fx:id="openItem" onAction="#onOpen" mnemonicParsing="true" text="_Odpri vnos" accelerator="Shortcut+O">
+                            <graphic>
+                                <FontIcon iconLiteral="bi-folder2-open" iconSize="14" styleClass="menu-icon" />
+                            </graphic>
+                        </MenuItem>
                         <MenuItem fx:id="saveItem" onAction="#onSave" mnemonicParsing="true" text="_Shrani vnos" accelerator="Shortcut+S">
                             <graphic>
                                 <FontIcon iconLiteral="bi-card-checklist" iconSize="14" styleClass="menu-icon" />
@@ -361,12 +366,7 @@
                                     <FontIcon iconLiteral="bi-arrow-repeat" iconSize="14" styleClass="button-icon" />
                                 </graphic>
                             </Button>
-                            <Button fx:id="btnSave" mnemonicParsing="false" onAction="#onSave" styleClass="secondary-button" text="Shrani">
-                                <graphic>
-                                    <FontIcon iconLiteral="bi-card-checklist" iconSize="14" styleClass="button-icon" />
-                                </graphic>
-                            </Button>
-                            
+
                             <Label fx:id="actionSeparator" text="•" style="-fx-text-fill: #d9b2a2; -fx-font-size: 20px;" />
 
                             <Button fx:id="btnCheck" mnemonicParsing="false" onAction="#onCheckCurrentPage" styleClass="secondary-button" text="Preveri">

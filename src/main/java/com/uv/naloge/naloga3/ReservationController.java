@@ -125,6 +125,8 @@ public class ReservationController {
     private Label actionSeparator;
 
     @FXML
+    private MenuItem openItem;
+    @FXML
     private MenuItem saveItem;
     @FXML
     private MenuItem resetItem;
@@ -145,8 +147,6 @@ public class ReservationController {
     private javafx.scene.control.Button btnPrev;
     @FXML
     private javafx.scene.control.Button btnNext;
-    @FXML
-    private javafx.scene.control.Button btnSave;
     @FXML
     private javafx.scene.control.Button btnReset;
     @FXML
@@ -354,6 +354,255 @@ public class ReservationController {
         } catch (IOException exception) {
             setErrorStatus("Shranjevanje ni uspelo: " + exception.getMessage());
         }
+    }
+
+    @FXML
+    private void onOpen() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Odpri rezervacijo");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Besedilna datoteka (*.txt)", "*.txt"));
+
+        Window window = status.getScene() == null ? null : status.getScene().getWindow();
+        File chosenFile = fileChooser.showOpenDialog(window);
+        if (chosenFile == null) {
+            setNeutralStatus("Odpiranje je preklicano.");
+            return;
+        }
+
+        try {
+            String content = Files.readString(chosenFile.toPath(), StandardCharsets.UTF_8);
+            restoreFromText(content);
+            setSuccessStatus("Vnos obnovljen iz: " + chosenFile.getName());
+        } catch (IllegalArgumentException e) {
+            setErrorStatus("Neveljaven format datoteke: " + e.getMessage());
+        } catch (IOException e) {
+            setErrorStatus("Odpiranje ni uspelo: " + e.getMessage());
+        }
+    }
+
+    private void restoreFromText(String content) {
+        String[] lines = content.split("\\r?\\n");
+        Map<String, String> fields = parseReportFields(lines);
+
+        if (!fields.containsKey("REZERVACIJA POČITNIC")) {
+            throw new IllegalArgumentException("manjka glava 'REZERVACIJA POČITNIC'");
+        }
+
+        setFieldSafely(destinationCountry, fields, "Država");
+        refreshDestinationChoices(destinationCountry.getValue());
+        setFieldSafely(destination, fields, "Kraj");
+        accommodationLocation.setText(fields.getOrDefault("Kraj nastanitve", ""));
+        departureDate.setValue(parseDateField(fields.get("Odhod")));
+        returnDate.setValue(parseDateField(fields.get("Vrnitev")));
+
+        restoreTransport(fields.getOrDefault("PREVOZ", ""));
+        restoreAccommodationType(fields.getOrDefault("Tip nastanitve", ""));
+        restoreSpecialRequirements(fields.getOrDefault("Posebne zahteve", ""));
+
+        payerName.setText(fields.getOrDefault("Ime", ""));
+        payerSurname.setText(fields.getOrDefault("Priimek", ""));
+        payerStreet.setText(fields.getOrDefault("Ulica", ""));
+        payerHouseNumber.setText(fields.getOrDefault("Hišna številka", ""));
+        setFieldSafely(payerCountry, fields, "Država plačnika");
+        payerBirthDate.setValue(parseDateField(fields.get("Datum rojstva plačnika")));
+
+        cardNumber.setText(fields.getOrDefault("Številka kartice", ""));
+        cardHolder.setText(fields.getOrDefault("Imetnik kartice", ""));
+        cardSecurityCode.setText(fields.getOrDefault("Varnostna koda", ""));
+
+        restoreParticipants(fields.getOrDefault("OSEBE", ""));
+    }
+
+    private Map<String, String> parseReportFields(String[] lines) {
+        Map<String, String> fields = new HashMap<>();
+        String currentSection = null;
+        StringBuilder participantBlock = new StringBuilder();
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            if (trimmed.startsWith("REZERVACIJA")) {
+                fields.put("REZERVACIJA POČITNIC", trimmed);
+                continue;
+            }
+            if (trimmed.startsWith("Ustvarjeno:")) {
+                continue;
+            }
+
+            if (trimmed.equals("DESTINACIJA") || trimmed.equals("PREVOZ")
+                    || trimmed.equals("NASTANITEV IN ZAHTEVE")
+                    || trimmed.equals("PLAČNIK") || trimmed.equals("KARTICA")
+                    || trimmed.equals("OSEBE")) {
+                currentSection = trimmed;
+                if (trimmed.equals("OSEBE")) {
+                    participantBlock = new StringBuilder();
+                }
+                continue;
+            }
+
+            if (currentSection != null && currentSection.equals("OSEBE")) {
+                participantBlock.append(trimmed).append("\n");
+                continue;
+            }
+
+            int colonIdx = trimmed.indexOf(':');
+            if (colonIdx > 0) {
+                String key = trimmed.substring(0, colonIdx).trim();
+                String value = trimmed.substring(colonIdx + 1).trim();
+                if (currentSection != null && currentSection.equals("PLAČNIK") && key.equals("Država")) {
+                    key = "Država plačnika";
+                }
+                if (currentSection != null && currentSection.equals("KARTICA")) {
+                    if (key.equals("Številka")) key = "Številka kartice";
+                    if (key.equals("Imetnik")) key = "Imetnik kartice";
+                    if (key.equals("Varnostna koda")) key = "Varnostna koda";
+                }
+                fields.put(key, value);
+            } else if (currentSection != null && currentSection.equals("PREVOZ")) {
+                fields.put("PREVOZ", trimmed);
+            }
+        }
+
+        fields.put("OSEBE", participantBlock.toString().trim());
+        return fields;
+    }
+
+    private void setFieldSafely(ComboBox<String> comboBox, Map<String, String> fields, String key) {
+        String value = fields.get(key);
+        if (value == null || value.isEmpty()) return;
+        for (String item : comboBox.getItems()) {
+            if (item.equals(value)) {
+                comboBox.getSelectionModel().select(value);
+                return;
+            }
+        }
+    }
+
+    private LocalDate parseDateField(String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            return LocalDate.parse(value.trim(), dateFormatter);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void restoreTransport(String transportLine) {
+        if (transportLine.isEmpty()) return;
+
+        String[] modes = transportLine.split("\\s*,\\s*");
+        if (modes.length > 0 && !modes[0].isEmpty()) {
+            String firstMode = modes[0].trim();
+            boolean foundInCatalog = TRANSPORT_MODES.contains(firstMode);
+            if (foundInCatalog) {
+                transportMode.getSelectionModel().select(firstMode);
+            } else {
+                transportMode.getSelectionModel().select("Po izbiri");
+                customTransportMode.setText(firstMode);
+                hideAndDisable(customTransportMode, false);
+                hideAndDisable(customTransportModeLabel, false);
+            }
+        }
+    }
+
+    private void restoreAccommodationType(String typeValue) {
+        if (typeValue.isEmpty()) {
+            accommodationType.selectToggle(null);
+            return;
+        }
+
+        for (Toggle toggle : accommodationType.getToggles()) {
+            RadioButton radio = (RadioButton) toggle;
+            if (radio.getText().equals(typeValue)) {
+                accommodationType.selectToggle(toggle);
+                if (toggle == customAccommodationOption) {
+                    hideAndDisable(customAccommodationType, false);
+                }
+                return;
+            }
+        }
+
+        accommodationType.selectToggle(customAccommodationOption);
+        customAccommodationType.setText(typeValue);
+        hideAndDisable(customAccommodationType, false);
+    }
+
+    private void restoreSpecialRequirements(String requirementsLine) {
+        airConditioning.setSelected(false);
+        parking.setSelected(false);
+        internet.setSelected(false);
+        wifi.setSelected(false);
+        pool.setSelected(false);
+        hotWater.setSelected(false);
+        fridge.setSelected(false);
+        accessibility.setSelected(false);
+
+        if (requirementsLine.isEmpty() || requirementsLine.equals("Brez posebnih zahtev")) return;
+
+        Map<CheckBox, String> checkboxMap = new HashMap<>();
+        checkboxMap.put(airConditioning, "Klima");
+        checkboxMap.put(parking, "Parkirišče");
+        checkboxMap.put(internet, "Internet");
+        checkboxMap.put(wifi, "Wi-Fi");
+        checkboxMap.put(pool, "Bazen");
+        checkboxMap.put(hotWater, "Topla voda");
+        checkboxMap.put(fridge, "Hladilnik");
+        checkboxMap.put(accessibility, "Prilagojen dostop");
+
+        String[] parts = requirementsLine.split("\\s*,\\s*");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            for (Map.Entry<CheckBox, String> entry : checkboxMap.entrySet()) {
+                if (entry.getValue().equals(trimmed)) {
+                    entry.getKey().setSelected(true);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void restoreParticipants(String participantBlock) {
+        participantRowsRefreshing = true;
+        viewModel.participants.clear();
+
+        if (participantBlock.isEmpty() || participantBlock.equals("Ni vnesenih oseb.")) {
+            viewModel.participants.add(new ParticipantViewModel());
+            participantRowsRefreshing = false;
+            refreshParticipantRows();
+            return;
+        }
+
+        String[] lines = participantBlock.split("\\r?\\n");
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            int dotIdx = trimmed.indexOf('.');
+            if (dotIdx < 0) continue;
+
+            String afterNumber = trimmed.substring(dotIdx + 1).trim();
+            int lastDash = afterNumber.lastIndexOf(" - ");
+            if (lastDash < 0) continue;
+
+            String namePart = afterNumber.substring(0, lastDash).trim();
+            String datePart = afterNumber.substring(lastDash + 3).trim();
+
+            int lastSpace = namePart.lastIndexOf(' ');
+            String pName = lastSpace > 0 ? namePart.substring(0, lastSpace).trim() : namePart;
+            String pSurname = lastSpace > 0 ? namePart.substring(lastSpace + 1).trim() : "";
+
+            ParticipantViewModel pvm = new ParticipantViewModel();
+            pvm.name.set(pName);
+            pvm.surname.set(pSurname);
+            pvm.birthDate.set(parseDateField(datePart));
+            viewModel.participants.add(pvm);
+        }
+
+        viewModel.participants.add(new ParticipantViewModel());
+        participantRowsRefreshing = false;
+        refreshParticipantRows();
     }
 
     @FXML
@@ -757,6 +1006,7 @@ public class ReservationController {
     }
 
     private void configureMenuActions() {
+        openItem.setOnAction(event -> onOpen());
         saveItem.setOnAction(event -> onSave());
         resetItem.setOnAction(event -> onReset());
         closeItem.setOnAction(event -> onClose());
