@@ -6,6 +6,7 @@ module com.uv.naloge.tretjaNaloga {
     requires org.kordamp.bootstrapfx.core;
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.ikonli.bootstrapicons;
+    requires java.desktop;
 
     opens com.uv.naloge.naloga3 to javafx.fxml;
 

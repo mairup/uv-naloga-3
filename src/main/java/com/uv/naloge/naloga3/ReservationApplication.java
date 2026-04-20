@@ -14,13 +14,13 @@ public class ReservationApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(ReservationApplication.class.getResource("reservation-view.fxml"));
-        Scene scene = new Scene(loader.load(), 550, 900);
+        Scene scene = new Scene(loader.load(), 520, 900);
         scene.getStylesheets().add(BootstrapFX.bootstrapFXStylesheet());
         scene.getStylesheets().add(Objects.requireNonNull(
                 ReservationApplication.class.getResource("styles.css")).toExternalForm());
 
         stage.setTitle("Rezervacija počitnic");
-        stage.setMinWidth(430);
+        stage.setMinWidth(450);
         stage.setMinHeight(760);
         stage.setScene(scene);
         stage.show();

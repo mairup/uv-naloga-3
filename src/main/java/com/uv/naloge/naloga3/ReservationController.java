@@ -1,7 +1,7 @@
 package com.uv.naloge.naloga3;
 
+import javafx.application.Platform;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -46,7 +46,7 @@ public class ReservationController {
 
     // --- REGEX CONSTANTS ---
     private static final String NAME_REGEX = "[\\p{L}][\\p{L}\\s'\\-]{1,49}";
-    private static final String HOUSE_NUMBER_REGEX = "[1-9]\\d{0,3}";
+    private static final String HOUSE_NUMBER_REGEX = "[1-9]\\d{0,3}\\s?[a-zA-Z]?";
     private static final String CARD_NUMBER_REGEX = "\\d{13,19}";
     private static final String CARD_SECURITY_CODE_REGEX = "\\d{3,4}";
 
@@ -130,6 +130,8 @@ public class ReservationController {
     private Label status;
     @FXML
     private Label pageIndicator;
+    @FXML
+    private Label actionSeparator;
 
     @FXML
     private MenuItem saveItem;
@@ -141,13 +143,13 @@ public class ReservationController {
     private MenuItem aboutItem;
 
     @FXML
-    private javafx.scene.control.ScrollPane page1;
+    private javafx.scene.layout.VBox page1;
     @FXML
     private javafx.scene.layout.VBox page2;
     @FXML
-    private javafx.scene.control.ScrollPane page3;
+    private javafx.scene.layout.VBox page3;
     @FXML
-    private javafx.scene.control.ScrollPane page4;
+    private javafx.scene.layout.VBox page4;
     @FXML
     private javafx.scene.control.Button btnPrev;
     @FXML
@@ -198,6 +200,7 @@ public class ReservationController {
         configureChoiceControls();
         configureCountControls();
         configureNumericInputControls();
+        configureDatePickers();
         configureMenuActions();
         configureValidationRecovery();
         configureResponsiveButtons();
@@ -213,9 +216,29 @@ public class ReservationController {
         departureDate.valueProperty().bindBidirectional(viewModel.departureDate);
         returnDate.valueProperty().bindBidirectional(viewModel.returnDate);
 
-        childrenCount.getValueFactory().valueProperty().bindBidirectional(viewModel.childrenCount.asObject());
-        teenCount.getValueFactory().valueProperty().bindBidirectional(viewModel.teenCount.asObject());
-        adultCount.getValueFactory().valueProperty().bindBidirectional(viewModel.adultCount.asObject());
+        childrenCount.valueProperty().addListener((obs, oldVal, newVal) -> {
+            viewModel.childrenCount.set(newVal);
+            refreshParticipantRows();
+        });
+        teenCount.valueProperty().addListener((obs, oldVal, newVal) -> {
+            viewModel.teenCount.set(newVal);
+            refreshParticipantRows();
+        });
+        adultCount.valueProperty().addListener((obs, oldVal, newVal) -> {
+            viewModel.adultCount.set(newVal);
+            refreshParticipantRows();
+        });
+
+        viewModel.childrenCount
+                .addListener((obs, oldVal, newVal) -> childrenCount.getValueFactory().setValue(newVal.intValue()));
+        viewModel.teenCount
+                .addListener((obs, oldVal, newVal) -> teenCount.getValueFactory().setValue(newVal.intValue()));
+        viewModel.adultCount
+                .addListener((obs, oldVal, newVal) -> adultCount.getValueFactory().setValue(newVal.intValue()));
+
+        viewModel.childrenCount.set(childrenCount.getValue());
+        viewModel.teenCount.set(teenCount.getValue());
+        viewModel.adultCount.set(adultCount.getValue());
 
         payerName.textProperty().bindBidirectional(viewModel.payerName);
         payerSurname.textProperty().bindBidirectional(viewModel.payerSurname);
@@ -255,31 +278,98 @@ public class ReservationController {
     }
 
     private void configureResponsiveButtons() {
+        Platform.runLater(() -> {
+            if (btnNext.getScene() != null) {
+                updateResponsiveControls(btnNext.getScene().getWidth());
+            }
+        });
+
         btnNext.sceneProperty().addListener((obs, oldScene, newScene) -> {
             if (newScene != null) {
-                newScene.windowProperty().addListener((wObs, oldW, newW) -> {
-                    if (newW != null) {
-                        newW.widthProperty().addListener((szObs, oldWidth, newWidth) -> {
-                            if (newWidth.doubleValue() < 550) {
-                                btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-                                btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-                            } else {
-                                btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
-                                btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
-                            }
-                        });
-                    }
+                updateResponsiveControls(newScene.getWidth());
+                newScene.widthProperty().addListener((szObs, oldWidth, newWidth) -> {
+                    updateResponsiveControls(newWidth.doubleValue());
                 });
             }
         });
     }
 
+    private void updateResponsiveControls(double windowWidth) {
+        boolean compactNavigation = windowWidth < 520;
+
+        if (compactNavigation) {
+            btnPrev.setText("");
+            btnNext.setText("");
+            btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+            btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+            if (actionSeparator != null) {
+                actionSeparator.setVisible(false);
+                actionSeparator.setManaged(false);
+            }
+        } else {
+            btnPrev.setText("Nazaj");
+            btnNext.setText("Naprej");
+            btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
+            btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
+            if (actionSeparator != null) {
+                actionSeparator.setVisible(true);
+                actionSeparator.setManaged(true);
+            }
+        }
+    }
+
     @FXML
     private void onReserve() {
         populateViewModelOptions();
-        List<String> validationErrors = validateForm(viewModel);
-        if (!validationErrors.isEmpty()) {
-            showValidationErrors(validationErrors, "Vnos ni veljaven.");
+
+        if (currentPageIndex < pages.size() - 1) {
+            clearValidationMarks();
+            List<String> errors = switch (currentPageIndex) {
+                case 0 -> validateCurrentPageTravel();
+                case 1 -> validateCurrentPageAccommodation();
+                case 2 -> validateCurrentPagePayment();
+                case 3 -> validateCurrentPagePeople();
+                default -> List.of();
+            };
+
+            if (errors.isEmpty()) {
+                onNextPage();
+            } else {
+                showValidationErrors(errors, "Vnos ni veljaven.");
+            }
+            return;
+        }
+
+        clearValidationMarks();
+        List<String> travelErrors = validateCurrentPageTravel();
+        if (!travelErrors.isEmpty()) {
+            currentPageIndex = 0;
+            updatePagination();
+            showValidationErrors(travelErrors, "Vnos ni veljaven.");
+            return;
+        }
+
+        List<String> accErrors = validateCurrentPageAccommodation();
+        if (!accErrors.isEmpty()) {
+            currentPageIndex = 1;
+            updatePagination();
+            showValidationErrors(accErrors, "Vnos ni veljaven.");
+            return;
+        }
+
+        List<String> payErrors = validateCurrentPagePayment();
+        if (!payErrors.isEmpty()) {
+            currentPageIndex = 2;
+            updatePagination();
+            showValidationErrors(payErrors, "Vnos ni veljaven.");
+            return;
+        }
+
+        List<String> peopleErrors = validateCurrentPagePeople();
+        if (!peopleErrors.isEmpty()) {
+            currentPageIndex = 3;
+            updatePagination();
+            showValidationErrors(peopleErrors, "Vnos ni veljaven.");
             return;
         }
 
@@ -337,11 +427,13 @@ public class ReservationController {
 
     @FXML
     private void onAbout() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("O aplikaciji");
-        alert.setHeaderText("Rezervacija počitnic");
-        alert.setContentText("Aplikacija omogoča urejen vnos, preverjanje, ponastavitev in shranjevanje rezervacije.");
-        alert.showAndWait();
+        new Thread(() -> {
+            try {
+                java.awt.Desktop.getDesktop().browse(new java.net.URI("https://github.com/mairup/uv-naloga-3"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     @FXML
@@ -388,6 +480,26 @@ public class ReservationController {
 
         btnPrev.setDisable(currentPageIndex == 0);
         btnNext.setDisable(currentPageIndex == pages.size() - 1);
+
+        if (currentPageIndex == pages.size() - 1) {
+            btnReserve.setText("Rezerviraj");
+            try {
+                org.kordamp.ikonli.javafx.FontIcon icon = new org.kordamp.ikonli.javafx.FontIcon("bi-check2-circle");
+                icon.setIconSize(14);
+                icon.getStyleClass().add("success-icon");
+                btnReserve.setGraphic(icon);
+            } catch (Exception e) {
+            }
+        } else {
+            btnReserve.setText("Naprej");
+            try {
+                org.kordamp.ikonli.javafx.FontIcon icon = new org.kordamp.ikonli.javafx.FontIcon("bi-arrow-right");
+                icon.setIconSize(14);
+                icon.getStyleClass().add("success-icon");
+                btnReserve.setGraphic(icon);
+            } catch (Exception e) {
+            }
+        }
 
         if (pageIndicator != null) {
             pageIndicator.setText((currentPageIndex + 1) + " / " + pages.size());
@@ -471,7 +583,7 @@ public class ReservationController {
         check(payerHouseNumber, isBlank(viewModel.payerHouseNumber.get()), "Vpišite hišno številko.", errors);
         if (!isBlank(viewModel.payerHouseNumber.get()))
             check(payerHouseNumber, !viewModel.payerHouseNumber.get().matches(HOUSE_NUMBER_REGEX),
-                    "Hišna številka mora biti pozitivno celo število.", errors);
+                    "Neveljavna hišna številka.", errors);
 
         check(payerCountry, isBlank(viewModel.payerCountry.get()), "Izberite državo plačnika.", errors);
 
@@ -649,22 +761,84 @@ public class ReservationController {
         childrenCount.setEditable(true);
         teenCount.setEditable(true);
         adultCount.setEditable(true);
-
-        ChangeListener<Integer> countListener = (observable, oldValue, newValue) -> refreshParticipantRows();
-        childrenCount.valueProperty().addListener(countListener);
-        teenCount.valueProperty().addListener(countListener);
-        adultCount.valueProperty().addListener(countListener);
     }
 
     private void configureNumericInputControls() {
         payerHouseNumber.setTextFormatter(
-                new TextFormatter<>(change -> change.getControlNewText().matches("\\d{0,4}") ? change : null));
+                new TextFormatter<>(
+                        change -> change.getControlNewText().matches("\\d{0,4}\\s?[a-zA-Z]?") ? change : null));
 
         cardNumber.setTextFormatter(
                 new TextFormatter<>(change -> change.getControlNewText().matches("\\d{0,19}") ? change : null));
+        cardNumber.setPromptText("1234 5678 1234 5678");
 
         cardSecurityCode.setTextFormatter(
                 new TextFormatter<>(change -> change.getControlNewText().matches("\\d{0,4}") ? change : null));
+    }
+
+    private void configureDatePickers() {
+        javafx.util.StringConverter<LocalDate> converter = new javafx.util.StringConverter<LocalDate>() {
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
+
+            @Override
+            public String toString(LocalDate date) {
+                if (date != null) {
+                    return dateFormatter.format(date);
+                } else {
+                    return "";
+                }
+            }
+
+            @Override
+            public LocalDate fromString(String string) {
+                if (string != null && !string.isEmpty()) {
+                    return LocalDate.parse(string, dateFormatter);
+                } else {
+                    return null;
+                }
+            }
+        };
+
+        departureDate.setConverter(converter);
+        returnDate.setConverter(converter);
+        payerBirthDate.setConverter(converter);
+
+        javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disablePastDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
+            @Override
+            public javafx.scene.control.DateCell call(final DatePicker datePicker) {
+                return new javafx.scene.control.DateCell() {
+                    @Override
+                    public void updateItem(LocalDate item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item.isBefore(LocalDate.now())) {
+                            setDisable(true);
+                            setStyle("-fx-background-color: #ffc0cb;");
+                        }
+                    }
+                };
+            }
+        };
+
+        departureDate.setDayCellFactory(disablePastDatesDayCellFactory);
+        returnDate.setDayCellFactory(disablePastDatesDayCellFactory);
+
+        javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disableFutureDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
+            @Override
+            public javafx.scene.control.DateCell call(final DatePicker datePicker) {
+                return new javafx.scene.control.DateCell() {
+                    @Override
+                    public void updateItem(LocalDate item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (item.isAfter(LocalDate.now())) {
+                            setDisable(true);
+                            setStyle("-fx-background-color: #ffc0cb;");
+                        }
+                    }
+                };
+            }
+        };
+
+        payerBirthDate.setDayCellFactory(disableFutureDatesDayCellFactory);
     }
 
     private void configureMenuActions() {
@@ -731,7 +905,7 @@ public class ReservationController {
         java.util.stream.Stream.of(payerName, payerSurname, payerStreet, payerHouseNumber)
                 .filter(Objects::nonNull).forEach(TextField::clear);
         payerCountry.getSelectionModel().select("Slovenija");
-        payerBirthDate.setValue(null);
+        payerBirthDate.setValue(LocalDate.now().minusYears(18));
     }
 
     private void resetCardDetails() {
@@ -985,19 +1159,63 @@ public class ReservationController {
             surname.setPromptText("Priimek");
             birthDate.setPromptText("Datum rojstva");
 
+            javafx.util.StringConverter<LocalDate> converter = new javafx.util.StringConverter<LocalDate>() {
+                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
+
+                @Override
+                public String toString(LocalDate date) {
+                    if (date != null) {
+                        return dateFormatter.format(date);
+                    } else {
+                        return "";
+                    }
+                }
+
+                @Override
+                public LocalDate fromString(String string) {
+                    if (string != null && !string.isEmpty()) {
+                        return LocalDate.parse(string, dateFormatter);
+                    } else {
+                        return null;
+                    }
+                }
+            };
+            birthDate.setConverter(converter);
+
+            javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disableFutureDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
+                @Override
+                public javafx.scene.control.DateCell call(final DatePicker datePicker) {
+                    return new javafx.scene.control.DateCell() {
+                        @Override
+                        public void updateItem(LocalDate item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (item.isAfter(LocalDate.now())) {
+                                setDisable(true);
+                                setStyle("-fx-background-color: #ffc0cb;");
+                            }
+                        }
+                    };
+                }
+            };
+            birthDate.setDayCellFactory(disableFutureDatesDayCellFactory);
+
             HBox.setHgrow(name, Priority.ALWAYS);
             HBox.setHgrow(surname, Priority.ALWAYS);
             HBox.setHgrow(birthDate, Priority.ALWAYS);
 
-            container = new HBox(10, label, name, surname, birthDate);
+            container = new HBox(4, label, name, surname, birthDate);
             container.getStyleClass().add("participant-row");
 
             setIndex(index);
         }
 
         private void setIndex(int index) {
-            label.setText(index + ". oseba");
-            label.setMinWidth(72);
+            label.setText(index + ".");
+            label.setMinWidth(30);
+            label.setPrefWidth(30);
+            label.setMaxWidth(30);
+            label.setStyle("-fx-font-size: 14px; -fx-padding: 0 1px 0 0px;");
+            container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         }
     }
 
