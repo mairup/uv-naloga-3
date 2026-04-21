@@ -661,3 +661,36 @@
 .dialog-pane > .button-bar .button:cancel:hover {
   -fx-background-color: #cd9e8d;
 }
+
+.report-subtitle {
+  -fx-font-size: 13px;
+  -fx-text-fill: #4a6b4f;
+}
+
+.action-separator {
+  -fx-text-fill: #d9b2a2;
+  -fx-font-size: 20px;
+}
+
+.participant-number {
+  -fx-font-size: 14px;
+  -fx-padding: 0 1px 0 0;
+}
+
+.disabled-date {
+  -fx-background-color: #ffc0cb;
+}
+
+.status-success {
+  -fx-fill: #2f6c3b;
+  -fx-font-weight: 700;
+}
+
+.status-error-prefix {
+  -fx-fill: #24322b;
+}
+
+.status-error-detail {
+  -fx-fill: #a5352f;
+  -fx-font-weight: 700;
+}

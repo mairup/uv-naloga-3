@@ -1,9 +1,5 @@
 package com.uv.naloge.naloga3;
 
-import javafx.application.Platform;
-import javafx.beans.property.*;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -13,175 +9,59 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TextFormatter;
-import javafx.scene.control.Tooltip;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.Node;
-import javafx.scene.control.Control;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 public class ReservationController {
-
-    // --- REGEX CONSTANTS ---
-    private static final String NAME_REGEX = "[\\p{L}][\\p{L}\\s'\\-]{1,49}";
-    private static final String HOUSE_NUMBER_REGEX = "[1-9]\\d{0,3}\\s?[a-zA-Z]?";
-    private static final String CARD_NUMBER_REGEX = "\\d{13,19}";
-    private static final String CARD_SECURITY_CODE_REGEX = "\\d{3,4}";
-
-    // --- FXML UI COMPONENTS ---
     @FXML
-    private ComboBox<String> destinationCountry;
+    private ComboBox<String> destinationCountry, destination, transportMode, payerCountry;
     @FXML
-    private ComboBox<String> destination;
+    private TextField accommodationLocation, customTransportMode, customAccommodationType,
+            payerName, payerSurname, payerStreet, payerHouseNumber,
+            cardNumber, cardHolder, cardSecurityCode;
     @FXML
-    private TextField accommodationLocation;
-    @FXML
-    private DatePicker departureDate;
-    @FXML
-    private DatePicker returnDate;
-
-    @FXML
-    private ComboBox<String> transportMode;
-    @FXML
-    private Label customTransportModeLabel;
-    @FXML
-    private TextField customTransportMode;
-
+    private DatePicker departureDate, returnDate, payerBirthDate;
     @FXML
     private ToggleGroup accommodationType;
     @FXML
-    private RadioButton roomAccommodation;
+    private RadioButton roomAccommodation, customAccommodationOption;
     @FXML
-    private RadioButton customAccommodationOption;
+    private CheckBox airConditioning, parking, internet, wifi, pool, hotWater, fridge, accessibility;
     @FXML
-    private TextField customAccommodationType;
-
+    private VBox participantRowsBox, page1, page2, page3, page4, pageStack;
     @FXML
-    private CheckBox airConditioning;
+    private Label customTransportModeLabel, participantCount, pageIndicator;
     @FXML
-    private CheckBox parking;
+    private TextFlow status;
     @FXML
-    private CheckBox internet;
+    private MenuItem openItem, saveItem, resetItem, closeItem, aboutItem;
     @FXML
-    private CheckBox wifi;
+    private Button btnPrev, btnNext, btnReset, btnReserve, btnCheck;
     @FXML
-    private CheckBox pool;
-    @FXML
-    private CheckBox hotWater;
-    @FXML
-    private CheckBox fridge;
-    @FXML
-    private CheckBox accessibility;
-
-    @FXML
-    private TextField payerName;
-    @FXML
-    private TextField payerSurname;
-    @FXML
-    private TextField payerStreet;
-    @FXML
-    private TextField payerHouseNumber;
-    @FXML
-    private ComboBox<String> payerCountry;
-    @FXML
-    private DatePicker payerBirthDate;
-
-    @FXML
-    private TextField cardNumber;
-    @FXML
-    private TextField cardHolder;
-    @FXML
-    private TextField cardSecurityCode;
-
-    @FXML
-    private VBox participantRowsBox;
-    @FXML
-    private Label participantCount;
-    @FXML
-    private javafx.scene.text.TextFlow status;
-    @FXML
-    private Label pageIndicator;
-
-    @FXML
-    private MenuItem openItem;
-    @FXML
-    private MenuItem saveItem;
-    @FXML
-    private MenuItem resetItem;
-    @FXML
-    private MenuItem closeItem;
-    @FXML
-    private MenuItem aboutItem;
-
-    @FXML
-    private javafx.scene.layout.VBox page1;
-    @FXML
-    private javafx.scene.layout.VBox page2;
-    @FXML
-    private javafx.scene.layout.VBox page3;
-    @FXML
-    private javafx.scene.layout.VBox page4;
-    @FXML
-    private javafx.scene.control.Button btnPrev;
-    @FXML
-    private javafx.scene.control.Button btnNext;
-    @FXML
-    private javafx.scene.control.Button btnReset;
-    @FXML
-    private javafx.scene.control.Button btnReserve;
-    @FXML
-    private javafx.scene.control.Button btnCheck;
-    @FXML
-    private javafx.scene.layout.HBox navHighlight;
-    @FXML
-    private javafx.scene.layout.HBox actionBar;
-    @FXML
-    private javafx.scene.layout.HBox toolbar;
-    @FXML
-    private javafx.scene.layout.VBox pageStack;
-
-    // --- CATALOGS & DATA STRUCTURES ---
-    private static final Map<String, List<String>> DESTINATION_CATALOG = new LinkedHashMap<>();
-    static {
-        DESTINATION_CATALOG.put("Slovenija", List.of("Bled", "Bovec", "Piran", "Moravske Toplice"));
-        DESTINATION_CATALOG.put("Hrvaška", List.of("Rovinj", "Split", "Dubrovnik", "Otok Krk"));
-        DESTINATION_CATALOG.put("Italija", List.of("Benetke", "Trst", "Rim", "Sardinija"));
-        DESTINATION_CATALOG.put("Avstrija", List.of("Dunaj", "Salzburg", "Innsbruck", "Beljak"));
-        DESTINATION_CATALOG.put("Španija", List.of("Barcelona", "Madrid", "Malaga", "Mallorca"));
-    }
-
-    private static final List<String> TRANSPORT_MODES = List.of(
-            "Letalo", "Ladja", "Avtobus", "Kolo", "Vlak", "Po izbiri");
-
-    private static final List<String> PAYER_COUNTRIES = List.of(
-            "Slovenija", "Hrvaška", "Italija", "Avstrija", "Španija", "Nemčija", "Francija");
-
-    // --- STATE & FORMATTERS ---
-    private int currentPageIndex = 0;
+    private HBox navHighlight, actionBar, toolbar;
+    private final int[] currentPageIndex = { 0 };
     private final List<Node> pages = new ArrayList<>();
-    private final List<Control> invalidControls = new ArrayList<>();
-    private final Map<Control, Tooltip> originalTooltips = new HashMap<>();
     private final List<String> screenNames = List.of("Potovanje", "Nastanitev", "Podatki plačnika", "Osebe");
-
+    private final ReservationViewModel viewModel = new ReservationViewModel();
+    private final Map<CheckBox, String> requirementLabels = new LinkedHashMap<>();
+    private final ReservationValidator validator = new ReservationValidator();
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private final ReservationReportBuilder reportBuilder = new ReservationReportBuilder(dateFormatter,
+            dateTimeFormatter);
+    private final ReservationFileIO fileIO = new ReservationFileIO();
+    private ParticipantManager participantManager;
     private ReservationViewModel confirmedViewModel;
     private Node successScreen;
 
@@ -189,28 +69,53 @@ public class ReservationController {
         return successScreen != null && successScreen.isVisible();
     }
 
-    private final ReservationViewModel viewModel = new ReservationViewModel();
+    private int currentPage() {
+        return currentPageIndex[0];
+    }
 
-    private final List<ParticipantRow> participantRows = new ArrayList<>();
-    private boolean participantRowsRefreshing = false;
-    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private void setCurrentPage(int index) {
+        currentPageIndex[0] = index;
+    }
 
     @FXML
     public void initialize() {
         java.util.stream.Stream.of(page1, page2, page3, page4)
                 .filter(Objects::nonNull).forEach(pages::add);
+        initializeRequirementLabels();
+        participantManager = new ParticipantManager(participantRowsBox, viewModel, validator, participantCount);
         updatePagination();
-
-        configureChoiceControls();
-        configureNumericInputControls();
-        configureDatePickers();
-        configureMenuActions();
-        configureValidationRecovery();
-        configureResponsiveButtons();
+        ReservationFormConfigurator.configureChoiceControls(
+                destinationCountry, destination, transportMode,
+                customTransportMode, customTransportModeLabel,
+                accommodationType, customAccommodationOption,
+                customAccommodationType, payerCountry,
+                this::onDestinationCountryChanged);
+        ReservationFormConfigurator.configureNumericInputControls(payerHouseNumber, cardNumber, cardSecurityCode);
+        ReservationFormConfigurator.configureDatePickers(departureDate, returnDate, payerBirthDate);
+        ReservationFormConfigurator.configureMenuActions(
+                openItem, saveItem, resetItem, closeItem, aboutItem,
+                this::onOpen, this::onSave, this::onReset, this::onClose, this::onAbout);
+        ReservationFormConfigurator.configureResponsiveButtons(btnPrev, btnNext);
+        validator.configureValidationRecovery(
+                destinationCountry, destination, accommodationLocation, departureDate, returnDate,
+                transportMode, customTransportMode, roomAccommodation, customAccommodationOption,
+                customAccommodationType, airConditioning, parking, internet, wifi, pool, hotWater,
+                fridge, accessibility, payerName, payerSurname, payerStreet, payerHouseNumber,
+                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode);
         bindViewModel();
         resetForm();
         setNeutralStatus("Pripravljen za vnos rezervacije.");
+    }
+
+    private void initializeRequirementLabels() {
+        requirementLabels.put(airConditioning, "Klima");
+        requirementLabels.put(parking, "Parkirišče");
+        requirementLabels.put(internet, "Internet");
+        requirementLabels.put(wifi, "Wi-Fi");
+        requirementLabels.put(pool, "Bazen");
+        requirementLabels.put(hotWater, "Topla voda");
+        requirementLabels.put(fridge, "Hladilnik");
+        requirementLabels.put(accessibility, "Prilagojen dostop");
     }
 
     private void bindViewModel() {
@@ -219,71 +124,32 @@ public class ReservationController {
         accommodationLocation.textProperty().bindBidirectional(viewModel.accommodationLocation);
         departureDate.valueProperty().bindBidirectional(viewModel.departureDate);
         returnDate.valueProperty().bindBidirectional(viewModel.returnDate);
-
         payerName.textProperty().bindBidirectional(viewModel.payerName);
         payerSurname.textProperty().bindBidirectional(viewModel.payerSurname);
         payerStreet.textProperty().bindBidirectional(viewModel.payerStreet);
         payerHouseNumber.textProperty().bindBidirectional(viewModel.payerHouseNumber);
         payerCountry.valueProperty().bindBidirectional(viewModel.payerCountry);
         payerBirthDate.valueProperty().bindBidirectional(viewModel.payerBirthDate);
-
         cardNumber.textProperty().bindBidirectional(viewModel.cardNumber);
         cardHolder.textProperty().bindBidirectional(viewModel.cardHolder);
         cardSecurityCode.textProperty().bindBidirectional(viewModel.cardSecurityCode);
-
-        rebuildParticipantRows();
-    }
-
-    private void configureResponsiveButtons() {
-        Platform.runLater(() -> {
-            if (btnNext.getScene() != null) {
-                updateResponsiveControls(btnNext.getScene().getWidth());
-            }
-        });
-
-        btnNext.sceneProperty().addListener((obs, oldScene, newScene) -> {
-            if (newScene != null) {
-                updateResponsiveControls(newScene.getWidth());
-                newScene.widthProperty().addListener((szObs, oldWidth, newWidth) -> {
-                    updateResponsiveControls(newWidth.doubleValue());
-                });
-            }
-        });
-    }
-
-    private void updateResponsiveControls(double windowWidth) {
-        boolean compactNavigation = windowWidth < 520;
-
-        if (compactNavigation) {
-            btnPrev.setText("");
-            btnNext.setText("");
-            btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-            btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-        } else {
-            btnPrev.setText("Nazaj");
-            btnNext.setText("Naprej");
-            btnPrev.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
-            btnNext.setContentDisplay(javafx.scene.control.ContentDisplay.RIGHT);
-        }
+        participantManager.rebuildParticipantRows();
     }
 
     @FXML
     private void onReserve() {
         if (isShowingSuccess())
             return;
-
         populateViewModelOptions();
-
-        if (currentPageIndex < pages.size() - 1) {
-            clearValidationMarks();
-            List<String> errors = switch (currentPageIndex) {
+        if (currentPage() < pages.size() - 1) {
+            validator.clearValidationMarks();
+            List<String> errors = switch (currentPage()) {
                 case 0 -> validateCurrentPageTravel();
                 case 1 -> validateCurrentPageAccommodation();
                 case 2 -> validateCurrentPagePayment();
                 case 3 -> validateCurrentPagePeople();
                 default -> List.of();
             };
-
             if (errors.isEmpty()) {
                 onNextPage();
             } else {
@@ -291,183 +157,31 @@ public class ReservationController {
             }
             return;
         }
-
-        clearValidationMarks();
+        validator.clearValidationMarks();
         List<String> travelErrors = validateCurrentPageTravel();
-        if (!travelErrors.isEmpty()) {
-            currentPageIndex = 0;
-            updatePagination();
-            showValidationErrors(travelErrors, "Vnos ni veljaven.");
-            return;
-        }
-
         List<String> accErrors = validateCurrentPageAccommodation();
-        if (!accErrors.isEmpty()) {
-            currentPageIndex = 1;
-            updatePagination();
-            showValidationErrors(accErrors, "Vnos ni veljaven.");
-            return;
-        }
-
         List<String> payErrors = validateCurrentPagePayment();
-        if (!payErrors.isEmpty()) {
-            currentPageIndex = 2;
-            updatePagination();
-            showValidationErrors(payErrors, "Vnos ni veljaven.");
-            return;
-        }
-
         List<String> peopleErrors = validateCurrentPagePeople();
-        if (!peopleErrors.isEmpty()) {
-            currentPageIndex = 3;
+        List<String> allErrors = new ArrayList<>();
+        allErrors.addAll(travelErrors);
+        allErrors.addAll(accErrors);
+        allErrors.addAll(payErrors);
+        allErrors.addAll(peopleErrors);
+        if (!allErrors.isEmpty()) {
+            if (!travelErrors.isEmpty())
+                setCurrentPage(0);
+            else if (!accErrors.isEmpty())
+                setCurrentPage(1);
+            else if (!payErrors.isEmpty())
+                setCurrentPage(2);
+            else
+                setCurrentPage(3);
             updatePagination();
-            showValidationErrors(peopleErrors, "Vnos ni veljaven.");
+            showValidationErrors(allErrors, "Vnos ni veljaven.");
             return;
         }
-
         confirmedViewModel = viewModel;
         showSuccessScreen();
-    }
-
-    private void showSuccessScreen() {
-        for (int i = 0; i < pages.size(); i++) {
-            pages.get(i).setVisible(false);
-            pages.get(i).setManaged(false);
-        }
-
-        if (successScreen == null) {
-            successScreen = buildSuccessScreen();
-            pageStack.getChildren().add(successScreen);
-        }
-        refreshSuccessScreen();
-        successScreen.setVisible(true);
-        successScreen.setManaged(true);
-
-        toolbar.setVisible(false);
-        toolbar.setManaged(false);
-        navHighlight.setVisible(false);
-        navHighlight.setManaged(false);
-        actionBar.getChildren().clear();
-
-        Button btnSave = new Button("Shrani");
-        btnSave.getStyleClass().addAll("success-button");
-        btnSave.setOnAction(e -> onSuccessSave());
-
-        org.kordamp.ikonli.javafx.FontIcon saveIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-download");
-        saveIcon.setIconSize(14);
-        saveIcon.getStyleClass().add("success-icon");
-        btnSave.setGraphic(saveIcon);
-
-        Button btnFinish = new Button("Nova rezervacija");
-        btnFinish.getStyleClass().addAll("primary-button");
-        btnFinish.setOnAction(e -> onFinish());
-
-        org.kordamp.ikonli.javafx.FontIcon finishIcon = new org.kordamp.ikonli.javafx.FontIcon(
-                "bi-arrow-counterclockwise");
-        finishIcon.setIconSize(14);
-        finishIcon.getStyleClass().add("button-icon");
-        btnFinish.setGraphic(finishIcon);
-
-        actionBar.getChildren().addAll(btnSave, btnFinish);
-
-        pageIndicator.setText("✓");
-        setSuccessStatus("Rezervacija je uspešno potrjena.");
-    }
-
-    private javafx.scene.layout.VBox buildSuccessScreen() {
-        javafx.scene.layout.VBox wrapper = new javafx.scene.layout.VBox();
-        wrapper.getStyleClass().addAll("form-scroll");
-        wrapper.setSpacing(0);
-
-        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox();
-        content.getStyleClass().addAll("content-pane");
-        content.setSpacing(12);
-
-        javafx.scene.layout.VBox card = new javafx.scene.layout.VBox();
-        card.getStyleClass().add("card");
-        card.setSpacing(12);
-
-        Label title = new Label("Rezervacija potrjena");
-        title.getStyleClass().add("page-title");
-
-        Label subtitle = new Label("Pregled rezervacije:");
-        subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #4a6b4f;");
-
-        Label report = new Label();
-        report.getStyleClass().add("reservation-report");
-        report.setWrapText(true);
-        report.setPrefWidth(Double.MAX_VALUE);
-        report.setText(buildReservationReport(confirmedViewModel));
-
-        javafx.scene.layout.VBox cardInner = new javafx.scene.layout.VBox(title, subtitle, new Label(""), report);
-
-        card.getChildren().add(cardInner);
-        card.setPadding(new javafx.geometry.Insets(14, 14, 14, 14));
-        content.setPadding(new javafx.geometry.Insets(14, 0, 16, 0));
-        content.getChildren().add(card);
-        wrapper.getChildren().add(content);
-
-        return wrapper;
-    }
-
-    private void refreshSuccessScreen() {
-        if (successScreen == null)
-            return;
-        successScreen.lookup(".reservation-report")
-                .setUserData(buildReservationReport(confirmedViewModel));
-        ((Label) successScreen.lookup(".reservation-report"))
-                .setText(buildReservationReport(confirmedViewModel));
-    }
-
-    private void onSuccessSave() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Shrani rezervacijo");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Besedilna datoteka (*.txt)", "*.txt"));
-        fileChooser.setInitialFileName(
-                "rezervacija-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".txt");
-
-        Window window = status.getScene() == null ? null : status.getScene().getWindow();
-        File chosenFile = fileChooser.showSaveDialog(window);
-        if (chosenFile == null) {
-            setNeutralStatus("Shranjevanje je preklicano.");
-            return;
-        }
-
-        try {
-            Files.writeString(chosenFile.toPath(), buildReservationReport(confirmedViewModel), StandardCharsets.UTF_8);
-            setSuccessStatus("Vnos je shranjen: " + chosenFile.getName());
-        } catch (IOException exception) {
-            setErrorStatus("Shranjevanje ni uspelo: " + exception.getMessage());
-        }
-    }
-
-    private void onFinish() {
-        confirmedViewModel = null;
-
-        successScreen.setVisible(false);
-        successScreen.setManaged(false);
-
-        toolbar.setVisible(true);
-        toolbar.setManaged(true);
-        navHighlight.setVisible(true);
-        navHighlight.setManaged(true);
-        currentPageIndex = 0;
-        clearValidationMarks();
-        updatePagination();
-        restoreActionBar();
-
-        resetForm();
-        setNeutralStatus("Pripravljen za vnos rezervacije.");
-    }
-
-    private void restoreActionBar() {
-        actionBar.getChildren().clear();
-
-        Label separator = new Label("•");
-        separator.setStyle("-fx-text-fill: #d9b2a2; -fx-font-size: 20px;");
-
-        actionBar.getChildren().addAll(btnReset, separator, btnCheck, btnReserve);
     }
 
     @FXML
@@ -476,293 +190,28 @@ public class ReservationController {
             onSuccessSave();
             return;
         }
-
-        populateViewModelOptions();
-        List<String> validationErrors = validateForm(viewModel);
+        List<String> validationErrors = validateForm();
         if (!validationErrors.isEmpty()) {
             showValidationErrors(validationErrors, "Shranjevanje ni mogoče.");
             return;
         }
-
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Shrani rezervacijo");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Besedilna datoteka (*.txt)", "*.txt"));
-        fileChooser
-                .setInitialFileName("rezervacija-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".txt");
-
-        Window window = status.getScene() == null ? null : status.getScene().getWindow();
-        File chosenFile = fileChooser.showSaveDialog(window);
-        if (chosenFile == null) {
-            setNeutralStatus("Shranjevanje je preklicano.");
-            return;
-        }
-
-        try {
-            Files.writeString(chosenFile.toPath(), buildReservationReport(viewModel), StandardCharsets.UTF_8);
-            setSuccessStatus("Vnos je shranjen: " + chosenFile.getName());
-        } catch (IOException exception) {
-            setErrorStatus("Shranjevanje ni uspelo: " + exception.getMessage());
-        }
+        saveReportToFile(reportBuilder.buildReservationReport(viewModel));
     }
 
     @FXML
     private void onOpen() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Odpri rezervacijo");
-        fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Besedilna datoteka (*.txt)", "*.txt"));
-
-        Window window = status.getScene() == null ? null : status.getScene().getWindow();
-        File chosenFile = fileChooser.showOpenDialog(window);
-        if (chosenFile == null) {
-            setNeutralStatus("Odpiranje je preklicano.");
+        if (isShowingSuccess())
+            onFinish();
+        String content = fileIO.openReport(currentWindow(), this::setNeutralStatus, this::setErrorStatus);
+        if (content == null) {
             return;
         }
-
         try {
-            String content = Files.readString(chosenFile.toPath(), StandardCharsets.UTF_8);
             restoreFromText(content);
-            setSuccessStatus("Vnos obnovljen iz: " + chosenFile.getName());
+            setSuccessStatus("Vnos obnovljen iz datoteke.");
         } catch (IllegalArgumentException e) {
             setErrorStatus("Neveljaven format datoteke: " + e.getMessage());
-        } catch (IOException e) {
-            setErrorStatus("Odpiranje ni uspelo: " + e.getMessage());
         }
-    }
-
-    private void restoreFromText(String content) {
-        String[] lines = content.split("\\r?\\n");
-        Map<String, String> fields = parseReportFields(lines);
-
-        if (!fields.containsKey("REZERVACIJA POČITNIC")) {
-            throw new IllegalArgumentException("manjka glava 'REZERVACIJA POČITNIC'");
-        }
-
-        setFieldSafely(destinationCountry, fields, "Država");
-        refreshDestinationChoices(destinationCountry.getValue());
-        setFieldSafely(destination, fields, "Kraj");
-        accommodationLocation.setText(fields.getOrDefault("Kraj nastanitve", ""));
-        departureDate.setValue(parseDateField(fields.get("Odhod")));
-        returnDate.setValue(parseDateField(fields.get("Vrnitev")));
-
-        restoreTransport(fields.getOrDefault("PREVOZ", ""));
-        restoreAccommodationType(fields.getOrDefault("Tip nastanitve", ""));
-        restoreSpecialRequirements(fields.getOrDefault("Posebne zahteve", ""));
-
-        payerName.setText(fields.getOrDefault("Ime", ""));
-        payerSurname.setText(fields.getOrDefault("Priimek", ""));
-        payerStreet.setText(fields.getOrDefault("Ulica", ""));
-        payerHouseNumber.setText(fields.getOrDefault("Hišna številka", ""));
-        setFieldSafely(payerCountry, fields, "Država plačnika");
-        payerBirthDate.setValue(parseDateField(fields.get("Datum rojstva")));
-
-        cardNumber.setText(fields.getOrDefault("Številka kartice", ""));
-        cardHolder.setText(fields.getOrDefault("Imetnik kartice", ""));
-        cardSecurityCode.setText(fields.getOrDefault("Varnostna koda", ""));
-
-        restoreParticipants(fields.getOrDefault("OSEBE", ""));
-    }
-
-    private Map<String, String> parseReportFields(String[] lines) {
-        Map<String, String> fields = new HashMap<>();
-        String currentSection = null;
-        StringBuilder participantBlock = new StringBuilder();
-
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty())
-                continue;
-
-            if (trimmed.startsWith("REZERVACIJA")) {
-                fields.put("REZERVACIJA POČITNIC", trimmed);
-                continue;
-            }
-            if (trimmed.startsWith("Ustvarjeno:")) {
-                continue;
-            }
-
-            if (trimmed.equals("DESTINACIJA") || trimmed.equals("PREVOZ")
-                    || trimmed.equals("NASTANITEV IN ZAHTEVE")
-                    || trimmed.equals("PLAČNIK") || trimmed.equals("KARTICA")
-                    || trimmed.equals("OSEBE")) {
-                currentSection = trimmed;
-                if (trimmed.equals("OSEBE")) {
-                    participantBlock = new StringBuilder();
-                }
-                continue;
-            }
-
-            if (currentSection != null && currentSection.equals("OSEBE")) {
-                participantBlock.append(trimmed).append("\n");
-                continue;
-            }
-
-            int colonIdx = trimmed.indexOf(':');
-            if (colonIdx > 0) {
-                String key = trimmed.substring(0, colonIdx).trim();
-                String value = trimmed.substring(colonIdx + 1).trim();
-                if (currentSection != null && currentSection.equals("PLAČNIK") && key.equals("Država")) {
-                    key = "Država plačnika";
-                }
-                if (currentSection != null && currentSection.equals("KARTICA")) {
-                    if (key.equals("Številka"))
-                        key = "Številka kartice";
-                    if (key.equals("Imetnik"))
-                        key = "Imetnik kartice";
-                    if (key.equals("Varnostna koda"))
-                        key = "Varnostna koda";
-                }
-                fields.put(key, value);
-            } else if (currentSection != null && currentSection.equals("PREVOZ")) {
-                fields.put("PREVOZ", trimmed);
-            }
-        }
-
-        fields.put("OSEBE", participantBlock.toString().trim());
-        return fields;
-    }
-
-    private void setFieldSafely(ComboBox<String> comboBox, Map<String, String> fields, String key) {
-        String value = fields.get(key);
-        if (value == null || value.isEmpty())
-            return;
-        for (String item : comboBox.getItems()) {
-            if (item.equals(value)) {
-                comboBox.getSelectionModel().select(value);
-                return;
-            }
-        }
-    }
-
-    private LocalDate parseDateField(String value) {
-        if (value == null || value.isEmpty())
-            return null;
-        try {
-            return LocalDate.parse(value.trim(), dateFormatter);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private void restoreTransport(String transportLine) {
-        if (transportLine.isEmpty())
-            return;
-
-        String[] modes = transportLine.split("\\s*,\\s*");
-        if (modes.length > 0 && !modes[0].isEmpty()) {
-            String firstMode = modes[0].trim();
-            boolean foundInCatalog = TRANSPORT_MODES.contains(firstMode);
-            if (foundInCatalog) {
-                transportMode.getSelectionModel().select(firstMode);
-            } else {
-                transportMode.getSelectionModel().select("Po izbiri");
-                customTransportMode.setText(firstMode);
-                hideAndDisable(customTransportMode, false);
-                hideAndDisable(customTransportModeLabel, false);
-            }
-        }
-    }
-
-    private void restoreAccommodationType(String typeValue) {
-        if (typeValue.isEmpty()) {
-            accommodationType.selectToggle(null);
-            return;
-        }
-
-        for (Toggle toggle : accommodationType.getToggles()) {
-            RadioButton radio = (RadioButton) toggle;
-            if (radio.getText().equals(typeValue)) {
-                accommodationType.selectToggle(toggle);
-                if (toggle == customAccommodationOption) {
-                    hideAndDisable(customAccommodationType, false);
-                }
-                return;
-            }
-        }
-
-        accommodationType.selectToggle(customAccommodationOption);
-        customAccommodationType.setText(typeValue);
-        hideAndDisable(customAccommodationType, false);
-    }
-
-    private void restoreSpecialRequirements(String requirementsLine) {
-        airConditioning.setSelected(false);
-        parking.setSelected(false);
-        internet.setSelected(false);
-        wifi.setSelected(false);
-        pool.setSelected(false);
-        hotWater.setSelected(false);
-        fridge.setSelected(false);
-        accessibility.setSelected(false);
-
-        if (requirementsLine.isEmpty() || requirementsLine.equals("Brez posebnih zahtev"))
-            return;
-
-        Map<CheckBox, String> checkboxMap = new HashMap<>();
-        checkboxMap.put(airConditioning, "Klima");
-        checkboxMap.put(parking, "Parkirišče");
-        checkboxMap.put(internet, "Internet");
-        checkboxMap.put(wifi, "Wi-Fi");
-        checkboxMap.put(pool, "Bazen");
-        checkboxMap.put(hotWater, "Topla voda");
-        checkboxMap.put(fridge, "Hladilnik");
-        checkboxMap.put(accessibility, "Prilagojen dostop");
-
-        String[] parts = requirementsLine.split("\\s*,\\s*");
-        for (String part : parts) {
-            String trimmed = part.trim();
-            for (Map.Entry<CheckBox, String> entry : checkboxMap.entrySet()) {
-                if (entry.getValue().equals(trimmed)) {
-                    entry.getKey().setSelected(true);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void restoreParticipants(String participantBlock) {
-        participantRowsRefreshing = true;
-        viewModel.participants.clear();
-
-        if (participantBlock.isEmpty() || participantBlock.equals("Ni vnesenih oseb.")) {
-            participantRowsRefreshing = false;
-            viewModel.participants.add(new ParticipantViewModel());
-            rebuildParticipantRows();
-            return;
-        }
-
-        String[] lines = participantBlock.split("\\r?\\n");
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty())
-                continue;
-
-            int dotIdx = trimmed.indexOf('.');
-            if (dotIdx < 0)
-                continue;
-
-            String afterNumber = trimmed.substring(dotIdx + 1).trim();
-            int lastDash = afterNumber.lastIndexOf(" - ");
-            if (lastDash < 0)
-                continue;
-
-            String namePart = afterNumber.substring(0, lastDash).trim();
-            String datePart = afterNumber.substring(lastDash + 3).trim();
-
-            int lastSpace = namePart.lastIndexOf(' ');
-            String pName = lastSpace > 0 ? namePart.substring(0, lastSpace).trim() : namePart;
-            String pSurname = lastSpace > 0 ? namePart.substring(lastSpace + 1).trim() : "";
-
-            ParticipantViewModel pvm = new ParticipantViewModel();
-            pvm.name.set(pName);
-            pvm.surname.set(pSurname);
-            pvm.birthDate.set(parseDateField(datePart));
-            viewModel.participants.add(pvm);
-        }
-
-        participantRowsRefreshing = false;
-        rebuildParticipantRows();
     }
 
     @FXML
@@ -777,9 +226,8 @@ public class ReservationController {
 
     @FXML
     private void onClose() {
-        if (status.getScene() != null) {
+        if (status.getScene() != null)
             status.getScene().getWindow().hide();
-        }
     }
 
     @FXML
@@ -797,9 +245,9 @@ public class ReservationController {
     private void onPrevPage() {
         if (isShowingSuccess())
             return;
-        if (currentPageIndex > 0) {
-            currentPageIndex--;
-            clearValidationMarks();
+        if (currentPage() > 0) {
+            setCurrentPage(currentPage() - 1);
+            validator.clearValidationMarks();
             updatePagination();
         }
     }
@@ -808,9 +256,9 @@ public class ReservationController {
     private void onNextPage() {
         if (isShowingSuccess())
             return;
-        if (currentPageIndex < pages.size() - 1) {
-            currentPageIndex++;
-            clearValidationMarks();
+        if (currentPage() < pages.size() - 1) {
+            setCurrentPage(currentPage() + 1);
+            validator.clearValidationMarks();
             updatePagination();
         }
     }
@@ -819,855 +267,278 @@ public class ReservationController {
     private void onCheckCurrentPage() {
         if (isShowingSuccess())
             return;
-        clearValidationMarks();
-        List<String> errors = switch (currentPageIndex) {
+        populateViewModelOptions();
+        validator.clearValidationMarks();
+        List<String> errors = switch (currentPage()) {
             case 0 -> validateCurrentPageTravel();
             case 1 -> validateCurrentPageAccommodation();
             case 2 -> validateCurrentPagePayment();
             case 3 -> validateCurrentPagePeople();
             default -> List.of("Stran ni na voljo za preverjanje.");
         };
-
         if (errors.isEmpty()) {
             setSuccessStatus("Trenutni zaslon je veljaven.");
             return;
         }
-
         setErrorStatus("Popravite označena polja. " + errors.getFirst());
+    }
+
+    private void onDestinationCountryChanged() {
+        ReservationFormConfigurator.refreshDestinationChoices(destination, destinationCountry.getValue());
     }
 
     private void updatePagination() {
         for (int i = 0; i < pages.size(); i++) {
-            pages.get(i).setVisible(i == currentPageIndex);
-            pages.get(i).setManaged(i == currentPageIndex);
+            pages.get(i).setVisible(i == currentPage());
+            pages.get(i).setManaged(i == currentPage());
         }
-
-        setNeutralStatus("Odprta stran: " + screenNames.get(currentPageIndex));
-
-        btnPrev.setDisable(currentPageIndex == 0);
-        btnNext.setDisable(currentPageIndex == pages.size() - 1);
-
-        if (currentPageIndex == pages.size() - 1) {
+        setNeutralStatus("Odprta stran: " + screenNames.get(currentPage()));
+        btnPrev.setDisable(currentPage() == 0);
+        btnNext.setDisable(currentPage() == pages.size() - 1);
+        if (currentPage() == pages.size() - 1) {
             btnReserve.setText("Rezerviraj");
-            try {
-                org.kordamp.ikonli.javafx.FontIcon icon = new org.kordamp.ikonli.javafx.FontIcon("bi-check2-circle");
-                icon.setIconSize(14);
-                icon.getStyleClass().add("success-icon");
-                btnReserve.setGraphic(icon);
-            } catch (Exception e) {
-            }
+            setButtonIcon(btnReserve, "bi-check2-circle", "success-icon");
         } else {
             btnReserve.setText("Naprej");
-            try {
-                org.kordamp.ikonli.javafx.FontIcon icon = new org.kordamp.ikonli.javafx.FontIcon("bi-arrow-right");
-                icon.setIconSize(14);
-                icon.getStyleClass().add("success-icon");
-                btnReserve.setGraphic(icon);
-            } catch (Exception e) {
-            }
+            setButtonIcon(btnReserve, "bi-arrow-right", "success-icon");
         }
-
         if (pageIndicator != null) {
-            pageIndicator.setText((currentPageIndex + 1) + " / " + pages.size());
+            pageIndicator.setText((currentPage() + 1) + " / " + pages.size());
         }
     }
 
-    private void check(Control control, boolean isInvalid, String errorMessage, List<String> errors) {
-        if (isInvalid) {
-            markInvalid(control, errorMessage);
-            if (errors != null)
-                errors.add(errorMessage);
+    private void setButtonIcon(Button button, String iconLiteral, String iconStyle) {
+        try {
+            org.kordamp.ikonli.javafx.FontIcon icon = new org.kordamp.ikonli.javafx.FontIcon(iconLiteral);
+            icon.setIconSize(14);
+            icon.getStyleClass().add(iconStyle);
+            button.setGraphic(icon);
+        } catch (Exception e) {
+            System.err.println("Napaka pri nalaganju ikone gumba: " + e.getMessage());
         }
     }
 
     private List<String> validateCurrentPageTravel() {
-        populateViewModelOptions();
-        List<String> errors = new ArrayList<>();
-
-        check(destinationCountry, isBlank(viewModel.destinationCountry.get()), "Izberite državo destinacije.", errors);
-        check(destination, isBlank(viewModel.destination.get()), "Izberite destinacijo.", errors);
-        check(accommodationLocation, isBlank(viewModel.accommodationLocation.get()), "Vpišite kraj nastanitve.",
-                errors);
-
-        LocalDate depart = viewModel.departureDate.get();
-        LocalDate return_ = viewModel.returnDate.get();
-
-        check(departureDate, depart == null, "Izberite datum odhoda.", errors);
-        if (depart != null) {
-            check(departureDate, depart.isBefore(LocalDate.now()),
-                    "Datum odhoda ne sme biti v preteklosti.", errors);
-        }
-        check(returnDate, return_ == null, "Izberite datum vrnitve.", errors);
-        if (depart != null && return_ != null) {
-            check(returnDate, !return_.isAfter(depart),
-                    "Datum vrnitve mora biti po datumu odhoda.", errors);
-        }
-        check(transportMode, viewModel.transportModes.isEmpty(), "Izberite način prevoza.", errors);
-        if ("Po izbiri".equals(transportMode.getValue())) {
-            check(customTransportMode, isBlank(customTransportMode.getText()),
-                    "Vpišite način prevoza po izbiri.", errors);
-        }
-
-        return errors;
+        return validator.validatePageTravel(viewModel,
+                destinationCountry, destination, accommodationLocation,
+                departureDate, returnDate, transportMode,
+                transportMode.getValue(), customTransportMode, customTransportMode.getText());
     }
 
     private List<String> validateCurrentPageAccommodation() {
-        populateViewModelOptions();
-        List<String> errors = new ArrayList<>();
-
-        if (isBlank(viewModel.accommodationType.get())) {
-            accommodationType.getToggles().stream()
-                    .filter(t -> t instanceof RadioButton)
-                    .map(t -> (RadioButton) t)
-                    .forEach(r -> check(r, true, "Izberite tip nastanitve.", null));
-            errors.add("Izberite tip nastanitve.");
-        }
-
-        if (accommodationType.getSelectedToggle() == customAccommodationOption) {
-            check(customAccommodationType, isBlank(customAccommodationType.getText()),
-                    "Vpišite tip nastanitve po izbiri.", errors);
-        }
-
-        return errors;
+        return validator.validatePageAccommodation(viewModel,
+                accommodationType, customAccommodationOption,
+                customAccommodationType, customAccommodationType.getText());
     }
 
     private List<String> validateCurrentPagePayment() {
-        List<String> errors = new ArrayList<>();
-
-        check(payerName, isBlank(viewModel.payerName.get()), "Vpišite ime plačnika.", errors);
-        if (!isBlank(viewModel.payerName.get()))
-            check(payerName, !isValidPersonName(viewModel.payerName.get()), "Ime plačnika vsebuje neveljavne znake.",
-                    errors);
-
-        check(payerSurname, isBlank(viewModel.payerSurname.get()), "Vpišite priimek plačnika.", errors);
-        if (!isBlank(viewModel.payerSurname.get()))
-            check(payerSurname, !isValidPersonName(viewModel.payerSurname.get()),
-                    "Priimek plačnika vsebuje neveljavne znake.", errors);
-
-        check(payerStreet, isBlank(viewModel.payerStreet.get()), "Vpišite ulico plačnika.", errors);
-
-        check(payerHouseNumber, isBlank(viewModel.payerHouseNumber.get()), "Vpišite hišno številko.", errors);
-        if (!isBlank(viewModel.payerHouseNumber.get()))
-            check(payerHouseNumber, !viewModel.payerHouseNumber.get().matches(HOUSE_NUMBER_REGEX),
-                    "Neveljavna hišna številka.", errors);
-
-        check(payerCountry, isBlank(viewModel.payerCountry.get()), "Izberite državo plačnika.", errors);
-
-        LocalDate birth = viewModel.payerBirthDate.get();
-        check(payerBirthDate, birth == null, "Izberite datum rojstva plačnika.", errors);
-        if (birth != null) {
-            check(payerBirthDate, birth.isAfter(LocalDate.now()),
-                    "Datum rojstva plačnika ne sme biti v prihodnosti.", errors);
-            check(payerBirthDate, birth.isAfter(LocalDate.now().minusYears(18)),
-                    "Plačnik mora biti star vsaj 18 let.", errors);
-        }
-
-        check(cardNumber, isBlank(viewModel.cardNumber.get()), "Vpišite številko kartice.", errors);
-        if (!isBlank(viewModel.cardNumber.get()))
-            check(cardNumber, !viewModel.cardNumber.get().matches(CARD_NUMBER_REGEX),
-                    "Številka kartice mora imeti od 13 do 19 števk.", errors);
-
-        check(cardHolder, isBlank(viewModel.cardHolder.get()), "Vpišite ime in priimek na kartici.", errors);
-        if (!isBlank(viewModel.cardHolder.get()))
-            check(cardHolder, !isValidPersonName(viewModel.cardHolder.get()),
-                    "Ime na kartici vsebuje neveljavne znake.",
-                    errors);
-
-        check(cardSecurityCode, isBlank(viewModel.cardSecurityCode.get()), "Vpišite varnostno kodo kartice.", errors);
-        if (!isBlank(viewModel.cardSecurityCode.get()))
-            check(cardSecurityCode, !viewModel.cardSecurityCode.get().matches(CARD_SECURITY_CODE_REGEX),
-                    "Varnostna koda mora imeti 3 ali 4 števke.", errors);
-
-        return errors;
+        return validator.validatePagePayment(viewModel,
+                payerName, payerSurname, payerStreet, payerHouseNumber,
+                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode);
     }
 
     private List<String> validateCurrentPagePeople() {
-        List<String> errors = new ArrayList<>();
-
-        boolean hasAtLeastOneFilledRow = false;
-
-        for (int i = 0; i < viewModel.participants.size() && i < participantRows.size(); i++) {
-            ParticipantViewModel participant = viewModel.participants.get(i);
-            ParticipantRow row = participantRows.get(i);
-
-            if (isParticipantEmpty(participant)) {
-                continue;
-            }
-
-            hasAtLeastOneFilledRow = true;
-            int personNumber = i + 1;
-
-            check(row.name, isBlank(participant.name.get()), "Vpišite ime za osebo " + personNumber + ".", errors);
-            if (!isBlank(participant.name.get())) {
-                check(row.name, !isValidPersonName(participant.name.get()),
-                        "Ime osebe " + personNumber + " vsebuje neveljavne znake.", errors);
-            }
-
-            check(row.surname, isBlank(participant.surname.get()), "Vpišite priimek za osebo " + personNumber + ".",
-                    errors);
-            if (!isBlank(participant.surname.get())) {
-                check(row.surname, !isValidPersonName(participant.surname.get()),
-                        "Priimek osebe " + personNumber + " vsebuje neveljavne znake.", errors);
-            }
-
-            String birthDateText = row.birthDate.getEditor() == null ? "" : row.birthDate.getEditor().getText();
-            LocalDate birthDate = participant.birthDate.get();
-            check(row.birthDate, isBlank(birthDateText) && birthDate == null,
-                    "Vpišite datum rojstva za osebo " + personNumber + ".", errors);
-            check(row.birthDate, !isBlank(birthDateText) && birthDate == null,
-                    "Datum rojstva osebe " + personNumber + " ni v veljavnem formatu.", errors);
-        }
-
-        if (!hasAtLeastOneFilledRow) {
-            errors.add("Vnesite vsaj eno osebo.");
-            for (ParticipantRow row : participantRows) {
-                markInvalid(row.name, "Vnesite vsaj eno osebo.");
-                markInvalid(row.surname, "Vnesite vsaj eno osebo.");
-                String bdText = row.birthDate.getEditor() == null ? "" : row.birthDate.getEditor().getText();
-                if (isBlank(bdText)) {
-                    markInvalid(row.birthDate, "Vnesite vsaj eno osebo.");
-                }
-            }
-        }
-
-        return errors;
+        return validator.validatePagePeople(viewModel, participantManager.getParticipantRows());
     }
 
-    private void markInvalid(Control control, String message) {
-        if (!control.getStyleClass().contains("field-error")) {
-            control.getStyleClass().add("field-error");
-        }
-        if (!invalidControls.contains(control)) {
-            invalidControls.add(control);
-            originalTooltips.put(control, control.getTooltip());
-        }
-        control.setTooltip(new Tooltip(message));
+    private List<String> validateForm() {
+        populateViewModelOptions();
+        return validator.validateAll(viewModel,
+                destinationCountry, destination, accommodationLocation,
+                departureDate, returnDate, transportMode,
+                transportMode.getValue(), customTransportMode, customTransportMode.getText(),
+                accommodationType, customAccommodationOption,
+                customAccommodationType, customAccommodationType.getText(),
+                payerName, payerSurname, payerStreet, payerHouseNumber,
+                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode,
+                participantManager.getParticipantRows());
     }
 
-    private void removeValidationMark(Control control) {
-        control.getStyleClass().remove("field-error");
-        if (originalTooltips.containsKey(control)) {
-            control.setTooltip(originalTooltips.get(control));
-        }
-        invalidControls.remove(control);
-        originalTooltips.remove(control);
-    }
-
-    private void clearValidationMarks() {
-        for (Control control : invalidControls) {
-            control.getStyleClass().remove("field-error");
-            control.setTooltip(originalTooltips.get(control));
-        }
-        invalidControls.clear();
-        originalTooltips.clear();
-    }
-
-    private void configureValidationRecovery() {
-        java.util.stream.Stream.of(
-                destinationCountry, destination, accommodationLocation, departureDate, returnDate,
-                transportMode, customTransportMode, roomAccommodation, customAccommodationOption,
-                customAccommodationType, airConditioning, parking, internet, wifi, pool, hotWater,
-                fridge, accessibility, payerName, payerSurname, payerStreet, payerHouseNumber,
-                payerCountry, payerBirthDate, cardNumber, cardHolder, cardSecurityCode)
-                .forEach(this::attachValidationRecovery);
-    }
-
-    private void attachValidationRecovery(Control control) {
-        if (control == null) {
-            return;
-        }
-        control.focusedProperty().addListener((obs, wasFocused, isFocused) -> {
-            if (isFocused) {
-                removeValidationMark(control);
-            }
-        });
-    }
-
-    private void configureChoiceControls() {
-        destinationCountry.setItems(FXCollections.observableArrayList(DESTINATION_CATALOG.keySet()));
-        destinationCountry.valueProperty()
-                .addListener((observable, oldValue, newValue) -> refreshDestinationChoices(newValue));
-
-        transportMode.setItems(FXCollections.observableArrayList(TRANSPORT_MODES));
-        transportMode.valueProperty().addListener((obs, oldValue, newValue) -> {
-            boolean custom = "Po izbiri".equals(newValue);
-            hideAndDisable(customTransportMode, !custom);
-            hideAndDisable(customTransportModeLabel, !custom);
-            if (!custom)
-                customTransportMode.clear();
-        });
-
-        accommodationType.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
-            boolean custom = newToggle == customAccommodationOption;
-            hideAndDisable(customAccommodationType, !custom);
-            if (!custom)
-                customAccommodationType.clear();
-        });
-
-        payerCountry.setItems(FXCollections.observableArrayList(PAYER_COUNTRIES));
-    }
-
-    private void configureNumericInputControls() {
-        payerHouseNumber.setTextFormatter(
-                new TextFormatter<>(
-                        change -> change.getControlNewText().matches("\\d{0,4}\\s?[a-zA-Z]?") ? change : null));
-
-        cardNumber.setTextFormatter(
-                new TextFormatter<>(change -> change.getControlNewText().matches("\\d{0,19}") ? change : null));
-        cardNumber.setPromptText("1234 5678 1234 5678");
-
-        cardSecurityCode.setTextFormatter(
-                new TextFormatter<>(change -> change.getControlNewText().matches("\\d{0,4}") ? change : null));
-    }
-
-    private void configureDatePickers() {
-        javafx.util.StringConverter<LocalDate> converter = new javafx.util.StringConverter<LocalDate>() {
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
-
-            @Override
-            public String toString(LocalDate date) {
-                if (date != null) {
-                    return dateFormatter.format(date);
-                } else {
-                    return "";
-                }
-            }
-
-            @Override
-            public LocalDate fromString(String string) {
-                if (string != null && !string.isEmpty()) {
-                    return LocalDate.parse(string, dateFormatter);
-                } else {
-                    return null;
-                }
-            }
-        };
-
-        departureDate.setConverter(converter);
-        returnDate.setConverter(converter);
-        payerBirthDate.setConverter(converter);
-
-        javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disablePastDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
-            @Override
-            public javafx.scene.control.DateCell call(final DatePicker datePicker) {
-                return new javafx.scene.control.DateCell() {
-                    @Override
-                    public void updateItem(LocalDate item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item.isBefore(LocalDate.now())) {
-                            setDisable(true);
-                            setStyle("-fx-background-color: #ffc0cb;");
-                        }
-                    }
-                };
-            }
-        };
-
-        departureDate.setDayCellFactory(disablePastDatesDayCellFactory);
-        returnDate.setDayCellFactory(disablePastDatesDayCellFactory);
-
-        javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disableFutureDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
-            @Override
-            public javafx.scene.control.DateCell call(final DatePicker datePicker) {
-                return new javafx.scene.control.DateCell() {
-                    @Override
-                    public void updateItem(LocalDate item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item.isAfter(LocalDate.now())) {
-                            setDisable(true);
-                            setStyle("-fx-background-color: #ffc0cb;");
-                        }
-                    }
-                };
-            }
-        };
-
-        payerBirthDate.setDayCellFactory(disableFutureDatesDayCellFactory);
-    }
-
-    private void configureMenuActions() {
-        openItem.setOnAction(event -> onOpen());
-        saveItem.setOnAction(event -> onSave());
-        resetItem.setOnAction(event -> onReset());
-        closeItem.setOnAction(event -> onClose());
-        aboutItem.setOnAction(event -> onAbout());
-    }
-
-    private void resetForm() {
-        resetDestinationAndLocation();
-        resetDates();
-        resetTransportAndAccommodation();
-        resetSpecialRequirements();
-        resetPayerDetails();
-        resetCardDetails();
-        resetParticipants();
-    }
-
-    private void resetDestinationAndLocation() {
-        destinationCountry.getSelectionModel().selectFirst();
-        refreshDestinationChoices(destinationCountry.getValue());
-        destination.getSelectionModel().selectFirst();
-        accommodationLocation.clear();
-    }
-
-    private void resetDates() {
-        LocalDate defaultDepartureDate = LocalDate.now().plusDays(30);
-        departureDate.setValue(defaultDepartureDate);
-        returnDate.setValue(defaultDepartureDate.plusDays(7));
-    }
-
-    private void hideAndDisable(Node node, boolean hide) {
-        if (node == null)
-            return;
-        node.setVisible(!hide);
-        node.setManaged(!hide);
-        node.setDisable(hide);
-    }
-
-    private void resetTransportAndAccommodation() {
-        transportMode.getSelectionModel().select("Avtobus");
-        customTransportMode.clear();
-        hideAndDisable(customTransportMode, true);
-        hideAndDisable(customTransportModeLabel, true);
-
-        if (roomAccommodation != null)
-            accommodationType.selectToggle(roomAccommodation);
-        customAccommodationType.clear();
-        hideAndDisable(customAccommodationType, true);
-    }
-
-    private void resetSpecialRequirements() {
-        java.util.stream.Stream.of(
-                airConditioning, parking, internet, wifi, pool, hotWater, fridge, accessibility)
-                .filter(Objects::nonNull).forEach(cb -> cb.setSelected(false));
-    }
-
-    private void resetPayerDetails() {
-        java.util.stream.Stream.of(payerName, payerSurname, payerStreet, payerHouseNumber)
-                .filter(Objects::nonNull).forEach(TextField::clear);
-        payerCountry.getSelectionModel().select("Slovenija");
-        payerBirthDate.setValue(null);
-    }
-
-    private void resetCardDetails() {
-        java.util.stream.Stream.of(cardNumber, cardHolder, cardSecurityCode)
-                .filter(Objects::nonNull).forEach(TextField::clear);
-    }
-
-    private void resetParticipants() {
-        viewModel.participants.clear();
-        viewModel.participants.add(new ParticipantViewModel());
-        rebuildParticipantRows();
-    }
-
-    private void refreshDestinationChoices(String country) {
-        List<String> destinations = DESTINATION_CATALOG.getOrDefault(country, List.of());
-        destination.setItems(FXCollections.observableArrayList(destinations));
-        if (!destinations.isEmpty()) {
-            destination.getSelectionModel().selectFirst();
-        } else {
-            destination.getSelectionModel().clearSelection();
-        }
-    }
-
-    private void rebuildParticipantRows() {
-        participantRowsRefreshing = true;
-        participantRowsBox.getChildren().clear();
-        participantRows.clear();
-
-        for (int i = 0; i < viewModel.participants.size(); i++) {
-            int rowIndex = i;
-            ParticipantViewModel pVm = viewModel.participants.get(i);
-            ParticipantRow row = new ParticipantRow(i + 1, () -> removeParticipantRow(rowIndex));
-
-            row.name.textProperty().bindBidirectional(pVm.name);
-            row.surname.textProperty().bindBidirectional(pVm.surname);
-            row.birthDate.valueProperty().bindBidirectional(pVm.birthDate);
-
-            row.name.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
-            row.surname.textProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
-            row.birthDate.valueProperty().addListener((obs, oldVal, newVal) -> onParticipantRowChanged());
-
-            attachValidationRecovery(row.name);
-            attachValidationRecovery(row.surname);
-            attachValidationRecovery(row.birthDate);
-
-            participantRows.add(row);
-            participantRowsBox.getChildren().add(row.container);
-        }
-
-        Button addButton = new Button();
-        addButton.getStyleClass().add("tile-add-button");
-        addButton.setPrefWidth(36);
-        addButton.setMaxWidth(36);
-        addButton.setMinWidth(36);
-        org.kordamp.ikonli.javafx.FontIcon addIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-plus");
-        addIcon.setIconSize(22);
-        addIcon.getStyleClass().add("tile-add-icon");
-        addButton.setGraphic(addIcon);
-        addButton.setOnAction(event -> addParticipantRow());
-        addButton.setAlignment(javafx.geometry.Pos.CENTER);
-        participantRowsBox.getChildren().add(addButton);
-
-        participantRowsRefreshing = false;
-        updateParticipantCount();
-    }
-
-    private void addParticipantRow() {
-        viewModel.participants.add(new ParticipantViewModel());
-        rebuildParticipantRows();
-        if (!participantRows.isEmpty()) {
-            ParticipantRow lastRow = participantRows.get(participantRows.size() - 1);
-            Platform.runLater(lastRow.name::requestFocus);
-        }
-    }
-
-    private void onParticipantRowChanged() {
-        if (participantRowsRefreshing)
-            return;
-        updateParticipantCount();
-    }
-
-    private void removeParticipantRow(int index) {
-        if (index < 0 || index >= viewModel.participants.size())
-            return;
-        viewModel.participants.remove(index);
-        rebuildParticipantRows();
-    }
-
-    private void updateParticipantCount() {
-        int filledRows = filledParticipantCount();
-        participantCount.setText("Vnesene osebe: " + filledRows);
-    }
-
-    private int filledParticipantCount() {
-        int count = 0;
-        for (ParticipantViewModel participant : viewModel.participants) {
-            if (!isParticipantEmpty(participant)) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private boolean isParticipantEmpty(ParticipantViewModel participant) {
-        return participant == null
-                || (isBlank(participant.name.get())
-                        && isBlank(participant.surname.get())
-                        && participant.birthDate.get() == null);
+    private void showValidationErrors(List<String> errors, String prefix) {
+        setErrorStatus(prefix + " " + errors.getFirst());
     }
 
     private void populateViewModelOptions() {
-        viewModel.transportModes.setAll(selectedTransportModes());
-        viewModel.accommodationType.set(selectedAccommodationType());
-        viewModel.specialRequirements.setAll(selectedSpecialRequirements());
+        viewModel.transportModes
+                .setAll(ReservationFormConfigurator.selectedTransportModes(transportMode, customTransportMode));
+        viewModel.accommodationType.set(ReservationFormConfigurator.selectedAccommodationType(
+                accommodationType, customAccommodationOption, customAccommodationType));
+        viewModel.specialRequirements
+                .setAll(ReservationFormConfigurator.selectedSpecialRequirements(requirementLabels));
     }
 
-    private List<String> validateForm(ReservationViewModel data) {
-        List<String> errors = new ArrayList<>();
-
-        errors.addAll(validateCurrentPageTravel());
-        errors.addAll(validateCurrentPageAccommodation());
-        errors.addAll(validateCurrentPagePayment());
-        errors.addAll(validateCurrentPagePeople());
-
-        return errors;
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private boolean isValidPersonName(String name) {
-        return name.trim().matches(NAME_REGEX);
-    }
-
-    private void showValidationErrors(List<String> validationErrors, String messagePrefix) {
-        setErrorStatus(messagePrefix + " " + validationErrors.getFirst());
-    }
-
-    private String buildReservationReport(ReservationViewModel data) {
-        return """
-                REZERVACIJA POČITNIC
-                Ustvarjeno: %s
-
-                DESTINACIJA
-                Država: %s
-                Kraj: %s
-                Kraj nastanitve: %s
-                Odhod: %s
-                Vrnitev: %s
-
-                PREVOZ
-                %s
-
-                NASTANITEV IN ZAHTEVE
-                Tip nastanitve: %s
-                Število oseb: %s
-                Posebne zahteve: %s
-
-                PLAČNIK
-                Ime: %s
-                Priimek: %s
-                Ulica: %s
-                Hišna številka: %s
-                Država: %s
-                Datum rojstva: %s
-
-                KARTICA
-                Številka: %s
-                Imetnik: %s
-                Varnostna koda: %s
-
-                OSEBE
-                %s""".formatted(
-                LocalDateTime.now().format(dateTimeFormatter),
-                nonNullText(data.destinationCountry.get()),
-                nonNullText(data.destination.get()),
-                nonNullText(data.accommodationLocation.get()),
-                formatDate(data.departureDate.get()),
-                formatDate(data.returnDate.get()),
-                String.join(", ", data.transportModes),
-                data.accommodationType.get(),
-                countFilledParticipants(data.participants),
-                String.join(", ", data.specialRequirements),
-                nonNullText(data.payerName.get()),
-                nonNullText(data.payerSurname.get()),
-                nonNullText(data.payerStreet.get()),
-                nonNullText(data.payerHouseNumber.get()),
-                nonNullText(data.payerCountry.get()),
-                formatDate(data.payerBirthDate.get()),
-                nonNullText(data.cardNumber.get()),
-                nonNullText(data.cardHolder.get()),
-                nonNullText(data.cardSecurityCode.get()),
-                buildParticipantsList(data.participants));
-    }
-
-    private int countFilledParticipants(List<ParticipantViewModel> participants) {
-        int filledCount = 0;
-        for (ParticipantViewModel participant : participants) {
-            if (!isParticipantEmpty(participant)) {
-                filledCount++;
-            }
+    private void showSuccessScreen() {
+        for (Node page : pages) {
+            page.setVisible(false);
+            page.setManaged(false);
         }
-        return filledCount;
+        if (successScreen == null) {
+            successScreen = buildSuccessScreen();
+            pageStack.getChildren().add(successScreen);
+        }
+        refreshSuccessScreen();
+        successScreen.setVisible(true);
+        successScreen.setManaged(true);
+        toolbar.setVisible(false);
+        toolbar.setManaged(false);
+        navHighlight.setVisible(false);
+        navHighlight.setManaged(false);
+        actionBar.getChildren().clear();
+        Button btnSave = new Button("Shrani");
+        btnSave.getStyleClass().addAll("success-button");
+        btnSave.setOnAction(e -> onSuccessSave());
+        org.kordamp.ikonli.javafx.FontIcon saveIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-download");
+        saveIcon.setIconSize(14);
+        saveIcon.getStyleClass().add("success-icon");
+        btnSave.setGraphic(saveIcon);
+        Button btnFinish = new Button("Nova rezervacija");
+        btnFinish.getStyleClass().addAll("primary-button");
+        btnFinish.setOnAction(e -> onFinish());
+        org.kordamp.ikonli.javafx.FontIcon finishIcon = new org.kordamp.ikonli.javafx.FontIcon(
+                "bi-arrow-counterclockwise");
+        finishIcon.setIconSize(14);
+        finishIcon.getStyleClass().add("button-icon");
+        btnFinish.setGraphic(finishIcon);
+        actionBar.getChildren().addAll(btnSave, btnFinish);
+        pageIndicator.setText("✓");
+        setSuccessStatus("Rezervacija je uspešno potrjena.");
     }
 
-    private String buildParticipantsList(List<ParticipantViewModel> participants) {
-        StringBuilder list = new StringBuilder();
-        int listedIndex = 1;
-        for (int index = 0; index < participants.size(); index++) {
-            ParticipantViewModel p = participants.get(index);
-            if (isParticipantEmpty(p)) {
-                continue;
-            }
-            list.append("%d. %s %s - %s%n".formatted(
-                    listedIndex,
-                    nonNullText(p.name.get()),
-                    nonNullText(p.surname.get()),
-                    formatDate(p.birthDate.get())));
-            listedIndex++;
-        }
-        if (list.isEmpty()) {
-            return "Ni vnesenih oseb.";
-        }
-        return list.toString().trim();
+    private VBox buildSuccessScreen() {
+        VBox wrapper = new VBox();
+        wrapper.getStyleClass().addAll("form-scroll");
+        wrapper.setSpacing(0);
+        VBox content = new VBox();
+        content.getStyleClass().addAll("content-pane");
+        content.setSpacing(12);
+        VBox card = new VBox();
+        card.getStyleClass().add("card");
+        card.setSpacing(12);
+        Label title = new Label("Rezervacija potrjena");
+        title.getStyleClass().add("page-title");
+        Label subtitle = new Label("Pregled rezervacije:");
+        subtitle.getStyleClass().add("report-subtitle");
+        Label report = new Label();
+        report.getStyleClass().add("reservation-report");
+        report.setWrapText(true);
+        report.setPrefWidth(Double.MAX_VALUE);
+        report.setText(reportBuilder.buildReservationReport(confirmedViewModel));
+        VBox cardInner = new VBox(title, subtitle, new Label(""), report);
+        card.getChildren().add(cardInner);
+        card.setPadding(new javafx.geometry.Insets(14, 14, 14, 14));
+        content.setPadding(new javafx.geometry.Insets(14, 0, 16, 0));
+        content.getChildren().add(card);
+        wrapper.getChildren().add(content);
+        return wrapper;
     }
 
-    private String nonNullText(String value) {
-        return Objects.requireNonNullElse(value, "").trim();
+    private void refreshSuccessScreen() {
+        if (successScreen == null)
+            return;
+        String reportText = reportBuilder.buildReservationReport(confirmedViewModel);
+        Label reportLabel = (Label) successScreen.lookup(".reservation-report");
+        reportLabel.setUserData(reportText);
+        reportLabel.setText(reportText);
     }
 
-    private String formatDate(LocalDate date) {
-        if (date == null) {
-            return "";
-        }
-        return date.format(dateFormatter);
+    private void onSuccessSave() {
+        saveReportToFile(reportBuilder.buildReservationReport(confirmedViewModel));
     }
 
-    private List<String> selectedTransportModes() {
-        List<String> selectedModes = new ArrayList<>();
-
-        if ("Po izbiri".equals(transportMode.getValue())) {
-            if (!isBlank(customTransportMode.getText())) {
-                selectedModes.add(customTransportMode.getText().trim());
-            }
-        } else if (!isBlank(transportMode.getValue())) {
-            selectedModes.add(transportMode.getValue());
-        }
-
-        return selectedModes;
+    private void onFinish() {
+        confirmedViewModel = null;
+        successScreen.setVisible(false);
+        successScreen.setManaged(false);
+        toolbar.setVisible(true);
+        toolbar.setManaged(true);
+        navHighlight.setVisible(true);
+        navHighlight.setManaged(true);
+        setCurrentPage(0);
+        validator.clearValidationMarks();
+        updatePagination();
+        restoreActionBar();
+        resetForm();
+        setNeutralStatus("Pripravljen za vnos rezervacije.");
     }
 
-    private String selectedAccommodationType() {
-        Toggle selected = accommodationType.getSelectedToggle();
-        if (selected == null) {
-            return "";
-        }
-
-        if (selected == customAccommodationOption) {
-            return isBlank(customAccommodationType.getText()) ? "" : customAccommodationType.getText().trim();
-        }
-
-        RadioButton selectedRadio = (RadioButton) selected;
-        return selectedRadio.getText();
+    private void restoreActionBar() {
+        actionBar.getChildren().clear();
+        Label separator = new Label("•");
+        separator.getStyleClass().add("action-separator");
+        actionBar.getChildren().addAll(btnReset, separator, btnCheck, btnReserve);
     }
 
-    private List<String> selectedSpecialRequirements() {
-        List<String> selectedRequirements = new ArrayList<>();
-        Map<CheckBox, String> requirementsMap = Map.of(
-                airConditioning, "Klima",
-                parking, "Parkirišče",
-                internet, "Internet",
-                wifi, "Wi-Fi",
-                pool, "Bazen",
-                hotWater, "Topla voda",
-                fridge, "Hladilnik");
+    private void saveReportToFile(String reportText) {
+        fileIO.saveReport(currentWindow(), reportText, this::setNeutralStatus, this::setSuccessStatus,
+                this::setErrorStatus);
+    }
 
-        requirementsMap.forEach((checkbox, name) -> {
-            if (checkbox != null && checkbox.isSelected())
-                selectedRequirements.add(name);
-        });
+    private void restoreFromText(String content) {
+        fileIO.restoreFromText(content,
+                dateFormatter,
+                viewModel,
+                participantManager,
+                requirementLabels,
+                destinationCountry,
+                this::onDestinationCountryChanged,
+                destination,
+                accommodationLocation,
+                departureDate,
+                returnDate,
+                transportMode,
+                customTransportMode,
+                customTransportModeLabel,
+                accommodationType,
+                customAccommodationOption,
+                customAccommodationType,
+                payerName,
+                payerSurname,
+                payerStreet,
+                payerHouseNumber,
+                payerCountry,
+                payerBirthDate,
+                cardNumber,
+                cardHolder,
+                cardSecurityCode);
+    }
 
-        if (accessibility != null && accessibility.isSelected()) {
-            selectedRequirements.add("Prilagojen dostop");
-        }
+    private Window currentWindow() {
+        return status.getScene() == null ? null : status.getScene().getWindow();
+    }
 
-        if (selectedRequirements.isEmpty()) {
-            selectedRequirements.add("Brez posebnih zahtev");
-        }
+    private void resetForm() {
+        ReservationFormConfigurator.resetDestinationAndLocation(
+                destinationCountry, destination, accommodationLocation, this::onDestinationCountryChanged);
+        ReservationFormConfigurator.resetDates(departureDate, returnDate);
+        ReservationFormConfigurator.resetTransportAndAccommodation(
+                transportMode, customTransportMode, customTransportModeLabel,
+                accommodationType, roomAccommodation, customAccommodationType);
+        resetSpecialRequirements();
+        ReservationFormConfigurator.resetPayerDetails(
+                payerName, payerSurname, payerStreet, payerHouseNumber, payerCountry, payerBirthDate);
+        ReservationFormConfigurator.resetCardDetails(cardNumber, cardHolder, cardSecurityCode);
+        participantManager.resetParticipants();
+    }
 
-        return selectedRequirements;
+    private void resetSpecialRequirements() {
+        requirementLabels.keySet().forEach(cb -> cb.setSelected(false));
     }
 
     private void setNeutralStatus(String message) {
-        status.getChildren().setAll(new javafx.scene.text.Text(message));
+        status.getChildren().setAll(new Text(message));
     }
 
     private void setSuccessStatus(String message) {
-        javafx.scene.text.Text text = new javafx.scene.text.Text(message);
-        text.setStyle("-fx-fill: #2f6c3b; -fx-font-weight: 700;");
+        Text text = new Text(message);
+        text.getStyleClass().add("status-success");
         status.getChildren().setAll(text);
     }
 
     private void setErrorStatus(String message) {
-        javafx.scene.text.Text prefix = new javafx.scene.text.Text("Napaka: ");
-        prefix.setStyle("-fx-fill: #24322b;");
-        javafx.scene.text.Text detail = new javafx.scene.text.Text(message);
-        detail.setStyle("-fx-fill: #a5352f; -fx-font-weight: 700;");
+        Text prefix = new Text("Napaka: ");
+        prefix.getStyleClass().add("status-error-prefix");
+        Text detail = new Text(message);
+        detail.getStyleClass().add("status-error-detail");
         status.getChildren().setAll(prefix, detail);
-    }
-
-    private static final class ParticipantRow {
-        private final HBox container;
-        private final Label label;
-        private final TextField name;
-        private final TextField surname;
-        private final DatePicker birthDate;
-        private final Button removeButton;
-
-        private ParticipantRow(int index, Runnable onRemove) {
-            label = new Label();
-            name = new TextField();
-            surname = new TextField();
-            birthDate = new DatePicker();
-            removeButton = new Button("Odstrani");
-
-            name.setPromptText("Ime");
-            surname.setPromptText("Priimek");
-            birthDate.setPromptText("Datum rojstva");
-            removeButton.getStyleClass().add("tile-remove-button");
-            removeButton.setText("");
-            org.kordamp.ikonli.javafx.FontIcon removeIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-trash");
-            removeIcon.setIconSize(16);
-            removeIcon.getStyleClass().add("tile-remove-icon");
-            removeButton.setGraphic(removeIcon);
-            removeButton.setOnAction(event -> onRemove.run());
-
-            javafx.util.StringConverter<LocalDate> converter = new javafx.util.StringConverter<LocalDate>() {
-                DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd. MM. yyyy");
-
-                @Override
-                public String toString(LocalDate date) {
-                    if (date != null) {
-                        return dateFormatter.format(date);
-                    } else {
-                        return "";
-                    }
-                }
-
-                @Override
-                public LocalDate fromString(String string) {
-                    if (string != null && !string.isEmpty()) {
-                        return LocalDate.parse(string, dateFormatter);
-                    } else {
-                        return null;
-                    }
-                }
-            };
-            birthDate.setConverter(converter);
-
-            javafx.util.Callback<DatePicker, javafx.scene.control.DateCell> disableFutureDatesDayCellFactory = new javafx.util.Callback<DatePicker, javafx.scene.control.DateCell>() {
-                @Override
-                public javafx.scene.control.DateCell call(final DatePicker datePicker) {
-                    return new javafx.scene.control.DateCell() {
-                        @Override
-                        public void updateItem(LocalDate item, boolean empty) {
-                            super.updateItem(item, empty);
-                            if (item.isAfter(LocalDate.now())) {
-                                setDisable(true);
-                                setStyle("-fx-background-color: #ffc0cb;");
-                            }
-                        }
-                    };
-                }
-            };
-            birthDate.setDayCellFactory(disableFutureDatesDayCellFactory);
-
-            HBox.setHgrow(name, Priority.ALWAYS);
-            HBox.setHgrow(surname, Priority.ALWAYS);
-            HBox.setHgrow(birthDate, Priority.ALWAYS);
-
-            container = new HBox(4, label, name, surname, birthDate, removeButton);
-            container.getStyleClass().add("participant-row");
-
-            setIndex(index);
-        }
-
-        private void setIndex(int index) {
-            label.setText(index + ".");
-            label.setMinWidth(30);
-            label.setPrefWidth(30);
-            label.setMaxWidth(30);
-            label.setStyle("-fx-font-size: 14px; -fx-padding: 0 1px 0 0px;");
-            container.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        }
-    }
-
-    public static final class ReservationViewModel {
-        public final StringProperty destinationCountry = new SimpleStringProperty();
-        public final StringProperty destination = new SimpleStringProperty();
-        public final StringProperty accommodationLocation = new SimpleStringProperty();
-        public final ObjectProperty<LocalDate> departureDate = new SimpleObjectProperty<>();
-        public final ObjectProperty<LocalDate> returnDate = new SimpleObjectProperty<>();
-        public final ObservableList<String> transportModes = FXCollections.observableArrayList();
-        public final StringProperty accommodationType = new SimpleStringProperty();
-        public final ObservableList<String> specialRequirements = FXCollections.observableArrayList();
-        public final StringProperty payerName = new SimpleStringProperty();
-        public final StringProperty payerSurname = new SimpleStringProperty();
-        public final StringProperty payerStreet = new SimpleStringProperty();
-        public final StringProperty payerHouseNumber = new SimpleStringProperty();
-        public final StringProperty payerCountry = new SimpleStringProperty();
-        public final ObjectProperty<LocalDate> payerBirthDate = new SimpleObjectProperty<>();
-        public final StringProperty cardNumber = new SimpleStringProperty();
-        public final StringProperty cardHolder = new SimpleStringProperty();
-        public final StringProperty cardSecurityCode = new SimpleStringProperty();
-        public final ObservableList<ParticipantViewModel> participants = FXCollections.observableArrayList();
-    }
-
-    public static final class ParticipantViewModel {
-        public final StringProperty name = new SimpleStringProperty();
-        public final StringProperty surname = new SimpleStringProperty();
-        public final ObjectProperty<LocalDate> birthDate = new SimpleObjectProperty<>();
     }
 }
