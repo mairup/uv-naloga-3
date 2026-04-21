@@ -479,16 +479,6 @@
   -fx-text-fill: #24322b;
 }
 
-.status-success {
-  -fx-text-fill: #2f6c3b;
-  -fx-font-weight: 700;
-}
-
-.status-error {
-  -fx-text-fill: #a5352f;
-  -fx-font-weight: 700;
-}
-
 .field-error {
   -fx-border-color: #b4412a;
   -fx-border-width: 1px;
@@ -580,4 +570,94 @@
   -fx-border-radius: 8px;
   -fx-background-radius: 8px;
   -fx-effect: dropshadow(gaussian, rgba(180, 65, 42, 0.45), 10, 0.25, 0, 0);
+}
+
+/* --- Dialog / Alert styling --- */
+
+.dialog-pane {
+  -fx-padding: 20px;
+}
+
+.reservation-report {
+  -fx-font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+  -fx-font-size: 11.5px;
+  -fx-text-fill: #3e3a37;
+  -fx-line-spacing: 3px;
+}
+
+.dialog-pane:header > .header-panel {
+  -fx-background-color: transparent;
+  -fx-padding: 0 0 12px 0;
+  -fx-border-color: #c7d8c2;
+  -fx-border-width: 0 0 1px 0;
+}
+
+.dialog-pane .header-panel .label {
+  -fx-font-family: "Noto Sans", "Segoe UI", sans-serif;
+  -fx-font-size: 16px;
+  -fx-font-weight: 700;
+  -fx-text-fill: #26382d;
+}
+
+.dialog-pane > .content {
+  -fx-background-color: transparent;
+  -fx-padding: 12px 0 12px 0;
+}
+
+.dialog-pane > .content.label {
+  -fx-font-family: "Noto Sans", "Segoe UI", sans-serif;
+  -fx-font-size: 13px;
+  -fx-text-fill: #3e3a37;
+  -fx-line-spacing: 4px;
+}
+
+.dialog-pane > .graphic-container {
+  -fx-padding: 0 12px 0 0;
+}
+
+.dialog-pane > .button-bar {
+  -fx-background-color: transparent;
+  -fx-padding: 14px 0 0 0;
+  -fx-border-color: transparent;
+}
+
+.dialog-pane > .button-bar > .container {
+  -fx-spacing: 10px;
+}
+
+.dialog-pane > .button-bar .button {
+  -fx-font-family: "Noto Sans", "Segoe UI", sans-serif;
+  -fx-font-weight: 700;
+  -fx-font-size: 13px;
+  -fx-padding: 7px 18px 7px 18px;
+  -fx-background-color: #cfa392;
+  -fx-border-color: #ab7f6f;
+  -fx-border-width: 1px;
+  -fx-border-radius: 8px;
+  -fx-background-radius: 8px;
+  -fx-text-fill: #2f2a27;
+  -fx-cursor: hand;
+}
+
+.dialog-pane > .button-bar .button:hover {
+  -fx-background-color: #c2917e;
+}
+
+.dialog-pane > .button-bar .button:default {
+  -fx-background-color: #5a916e;
+  -fx-border-color: #4b7c5e;
+  -fx-text-fill: white;
+}
+
+.dialog-pane > .button-bar .button:default:hover {
+  -fx-background-color: #4f8363;
+}
+
+.dialog-pane > .button-bar .button:cancel {
+  -fx-background-color: #d9b2a2;
+  -fx-border-color: #b48371;
+}
+
+.dialog-pane > .button-bar .button:cancel:hover {
+  -fx-background-color: #cd9e8d;
 }

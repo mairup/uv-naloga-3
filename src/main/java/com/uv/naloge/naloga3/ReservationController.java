@@ -5,7 +5,6 @@ import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -118,7 +117,7 @@ public class ReservationController {
     @FXML
     private Label participantCount;
     @FXML
-    private Label status;
+    private javafx.scene.text.TextFlow status;
     @FXML
     private Label pageIndicator;
 
@@ -151,6 +150,14 @@ public class ReservationController {
     private javafx.scene.control.Button btnReserve;
     @FXML
     private javafx.scene.control.Button btnCheck;
+    @FXML
+    private javafx.scene.layout.HBox navHighlight;
+    @FXML
+    private javafx.scene.layout.HBox actionBar;
+    @FXML
+    private javafx.scene.layout.HBox toolbar;
+    @FXML
+    private javafx.scene.layout.VBox pageStack;
 
     // --- CATALOGS & DATA STRUCTURES ---
     private static final Map<String, List<String>> DESTINATION_CATALOG = new LinkedHashMap<>();
@@ -173,6 +180,14 @@ public class ReservationController {
     private final List<Node> pages = new ArrayList<>();
     private final List<Control> invalidControls = new ArrayList<>();
     private final Map<Control, Tooltip> originalTooltips = new HashMap<>();
+    private final List<String> screenNames = List.of("Potovanje", "Nastanitev", "Podatki plačnika", "Osebe");
+
+    private ReservationViewModel confirmedViewModel;
+    private Node successScreen;
+
+    private boolean isShowingSuccess() {
+        return successScreen != null && successScreen.isVisible();
+    }
 
     private final ReservationViewModel viewModel = new ReservationViewModel();
 
@@ -254,6 +269,9 @@ public class ReservationController {
 
     @FXML
     private void onReserve() {
+        if (isShowingSuccess())
+            return;
+
         populateViewModelOptions();
 
         if (currentPageIndex < pages.size() - 1) {
@@ -307,16 +325,158 @@ public class ReservationController {
             return;
         }
 
+        confirmedViewModel = viewModel;
+        showSuccessScreen();
+    }
+
+    private void showSuccessScreen() {
+        for (int i = 0; i < pages.size(); i++) {
+            pages.get(i).setVisible(false);
+            pages.get(i).setManaged(false);
+        }
+
+        if (successScreen == null) {
+            successScreen = buildSuccessScreen();
+            pageStack.getChildren().add(successScreen);
+        }
+        refreshSuccessScreen();
+        successScreen.setVisible(true);
+        successScreen.setManaged(true);
+
+        toolbar.setVisible(false);
+        toolbar.setManaged(false);
+        navHighlight.setVisible(false);
+        navHighlight.setManaged(false);
+        actionBar.getChildren().clear();
+
+        Button btnSave = new Button("Shrani");
+        btnSave.getStyleClass().addAll("success-button");
+        btnSave.setOnAction(e -> onSuccessSave());
+
+        org.kordamp.ikonli.javafx.FontIcon saveIcon = new org.kordamp.ikonli.javafx.FontIcon("bi-download");
+        saveIcon.setIconSize(14);
+        saveIcon.getStyleClass().add("success-icon");
+        btnSave.setGraphic(saveIcon);
+
+        Button btnFinish = new Button("Nova rezervacija");
+        btnFinish.getStyleClass().addAll("primary-button");
+        btnFinish.setOnAction(e -> onFinish());
+
+        org.kordamp.ikonli.javafx.FontIcon finishIcon = new org.kordamp.ikonli.javafx.FontIcon(
+                "bi-arrow-counterclockwise");
+        finishIcon.setIconSize(14);
+        finishIcon.getStyleClass().add("button-icon");
+        btnFinish.setGraphic(finishIcon);
+
+        actionBar.getChildren().addAll(btnSave, btnFinish);
+
+        pageIndicator.setText("✓");
         setSuccessStatus("Rezervacija je uspešno potrjena.");
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Rezervacija potrjena");
-        alert.setHeaderText("Vnos je veljaven");
-        alert.setContentText("Rezervacija je pripravljena za nadaljnjo obdelavo.");
-        alert.showAndWait();
+    }
+
+    private javafx.scene.layout.VBox buildSuccessScreen() {
+        javafx.scene.layout.VBox wrapper = new javafx.scene.layout.VBox();
+        wrapper.getStyleClass().addAll("form-scroll");
+        wrapper.setSpacing(0);
+
+        javafx.scene.layout.VBox content = new javafx.scene.layout.VBox();
+        content.getStyleClass().addAll("content-pane");
+        content.setSpacing(12);
+
+        javafx.scene.layout.VBox card = new javafx.scene.layout.VBox();
+        card.getStyleClass().add("card");
+        card.setSpacing(12);
+
+        Label title = new Label("Rezervacija potrjena");
+        title.getStyleClass().add("page-title");
+
+        Label subtitle = new Label("Pregled rezervacije:");
+        subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #4a6b4f;");
+
+        Label report = new Label();
+        report.getStyleClass().add("reservation-report");
+        report.setWrapText(true);
+        report.setPrefWidth(Double.MAX_VALUE);
+        report.setText(buildReservationReport(confirmedViewModel));
+
+        javafx.scene.layout.VBox cardInner = new javafx.scene.layout.VBox(title, subtitle, new Label(""), report);
+
+        card.getChildren().add(cardInner);
+        card.setPadding(new javafx.geometry.Insets(14, 14, 14, 14));
+        content.setPadding(new javafx.geometry.Insets(14, 0, 16, 0));
+        content.getChildren().add(card);
+        wrapper.getChildren().add(content);
+
+        return wrapper;
+    }
+
+    private void refreshSuccessScreen() {
+        if (successScreen == null)
+            return;
+        successScreen.lookup(".reservation-report")
+                .setUserData(buildReservationReport(confirmedViewModel));
+        ((Label) successScreen.lookup(".reservation-report"))
+                .setText(buildReservationReport(confirmedViewModel));
+    }
+
+    private void onSuccessSave() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Shrani rezervacijo");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Besedilna datoteka (*.txt)", "*.txt"));
+        fileChooser.setInitialFileName(
+                "rezervacija-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".txt");
+
+        Window window = status.getScene() == null ? null : status.getScene().getWindow();
+        File chosenFile = fileChooser.showSaveDialog(window);
+        if (chosenFile == null) {
+            setNeutralStatus("Shranjevanje je preklicano.");
+            return;
+        }
+
+        try {
+            Files.writeString(chosenFile.toPath(), buildReservationReport(confirmedViewModel), StandardCharsets.UTF_8);
+            setSuccessStatus("Vnos je shranjen: " + chosenFile.getName());
+        } catch (IOException exception) {
+            setErrorStatus("Shranjevanje ni uspelo: " + exception.getMessage());
+        }
+    }
+
+    private void onFinish() {
+        confirmedViewModel = null;
+
+        successScreen.setVisible(false);
+        successScreen.setManaged(false);
+
+        toolbar.setVisible(true);
+        toolbar.setManaged(true);
+        navHighlight.setVisible(true);
+        navHighlight.setManaged(true);
+        currentPageIndex = 0;
+        clearValidationMarks();
+        updatePagination();
+        restoreActionBar();
+
+        resetForm();
+        setNeutralStatus("Pripravljen za vnos rezervacije.");
+    }
+
+    private void restoreActionBar() {
+        actionBar.getChildren().clear();
+
+        Label separator = new Label("•");
+        separator.setStyle("-fx-text-fill: #d9b2a2; -fx-font-size: 20px;");
+
+        actionBar.getChildren().addAll(btnReset, separator, btnCheck, btnReserve);
     }
 
     @FXML
     private void onSave() {
+        if (isShowingSuccess()) {
+            onSuccessSave();
+            return;
+        }
+
         populateViewModelOptions();
         List<String> validationErrors = validateForm(viewModel);
         if (!validationErrors.isEmpty()) {
@@ -395,7 +555,7 @@ public class ReservationController {
         payerStreet.setText(fields.getOrDefault("Ulica", ""));
         payerHouseNumber.setText(fields.getOrDefault("Hišna številka", ""));
         setFieldSafely(payerCountry, fields, "Država plačnika");
-        payerBirthDate.setValue(parseDateField(fields.get("Datum rojstva plačnika")));
+        payerBirthDate.setValue(parseDateField(fields.get("Datum rojstva")));
 
         cardNumber.setText(fields.getOrDefault("Številka kartice", ""));
         cardHolder.setText(fields.getOrDefault("Imetnik kartice", ""));
@@ -607,6 +767,10 @@ public class ReservationController {
 
     @FXML
     private void onReset() {
+        if (isShowingSuccess()) {
+            onFinish();
+            return;
+        }
         resetForm();
         setNeutralStatus("Vnosi so ponastavljeni.");
     }
@@ -631,22 +795,30 @@ public class ReservationController {
 
     @FXML
     private void onPrevPage() {
+        if (isShowingSuccess())
+            return;
         if (currentPageIndex > 0) {
             currentPageIndex--;
+            clearValidationMarks();
             updatePagination();
         }
     }
 
     @FXML
     private void onNextPage() {
+        if (isShowingSuccess())
+            return;
         if (currentPageIndex < pages.size() - 1) {
             currentPageIndex++;
+            clearValidationMarks();
             updatePagination();
         }
     }
 
     @FXML
     private void onCheckCurrentPage() {
+        if (isShowingSuccess())
+            return;
         clearValidationMarks();
         List<String> errors = switch (currentPageIndex) {
             case 0 -> validateCurrentPageTravel();
@@ -665,11 +837,12 @@ public class ReservationController {
     }
 
     private void updatePagination() {
-        clearValidationMarks();
         for (int i = 0; i < pages.size(); i++) {
             pages.get(i).setVisible(i == currentPageIndex);
             pages.get(i).setManaged(i == currentPageIndex);
         }
+
+        setNeutralStatus("Odprta stran: " + screenNames.get(currentPageIndex));
 
         btnPrev.setDisable(currentPageIndex == 0);
         btnNext.setDisable(currentPageIndex == pages.size() - 1);
@@ -1210,13 +1383,7 @@ public class ReservationController {
     }
 
     private void showValidationErrors(List<String> validationErrors, String messagePrefix) {
-        setErrorStatus(messagePrefix + " Preverite polja.");
-
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Napaka vnosa");
-        alert.setHeaderText(messagePrefix);
-        alert.setContentText(String.join("\n", validationErrors));
-        alert.showAndWait();
+        setErrorStatus(messagePrefix + " " + validationErrors.getFirst());
     }
 
     private String buildReservationReport(ReservationViewModel data) {
@@ -1373,25 +1540,22 @@ public class ReservationController {
         return selectedRequirements;
     }
 
-    private void setStatus(String message, String applyClass, String removeClass) {
-        status.getStyleClass().remove(removeClass);
-        if (applyClass != null && !status.getStyleClass().contains(applyClass)) {
-            status.getStyleClass().add(applyClass);
-        }
-        status.setText(message);
-    }
-
     private void setNeutralStatus(String message) {
-        status.getStyleClass().removeAll("status-success", "status-error");
-        status.setText(message);
+        status.getChildren().setAll(new javafx.scene.text.Text(message));
     }
 
     private void setSuccessStatus(String message) {
-        setStatus(message, "status-success", "status-error");
+        javafx.scene.text.Text text = new javafx.scene.text.Text(message);
+        text.setStyle("-fx-fill: #2f6c3b; -fx-font-weight: 700;");
+        status.getChildren().setAll(text);
     }
 
     private void setErrorStatus(String message) {
-        setStatus(message, "status-error", "status-success");
+        javafx.scene.text.Text prefix = new javafx.scene.text.Text("Napaka: ");
+        prefix.setStyle("-fx-fill: #24322b;");
+        javafx.scene.text.Text detail = new javafx.scene.text.Text(message);
+        detail.setStyle("-fx-fill: #a5352f; -fx-font-weight: 700;");
+        status.getChildren().setAll(prefix, detail);
     }
 
     private static final class ParticipantRow {
